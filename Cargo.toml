@@ -1,0 +1,7 @@
+[workspace]
+members = [
+  "programs/score-past-epoch"
+]
+
+[profile.dev]
+split-debuginfo = "unpacked"
