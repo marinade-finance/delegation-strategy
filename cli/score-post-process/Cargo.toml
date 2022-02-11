@@ -1,0 +1,30 @@
+[package]
+name = "score-post-process"
+version = "0.1.0"
+authors = ["lucio tato<luciotato@narwallets.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.40"
+solana-cli-config = "1.7.11"
+#once_cell = "1.7.2"
+thiserror = "1.0.24"
+#derive_more = "0.99.13"
+structopt = "0.3.21"
+bincode = "1.3.3"
+enum_dispatch = "0.3.5"
+log = "0.4.14"
+serde_json = "1.0.64"
+serde = { version = "1.0.125", features = ["derive"] }
+csv = "1.1"
+solana-clap-utils = "1.7.11"
+solana-client = "1.7.11"
+solana-logger = "1.7.11"
+solana-sdk = "1.7.11"
+marinade-finance = { git = "https://github.com/marinade-finance/liquid-staking-program" }
+cli-common = { path = "../cli-common" }
+
+[profile.release]
+overflow-checks = true

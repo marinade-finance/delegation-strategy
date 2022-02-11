@@ -1,0 +1,10 @@
+#!/bin/bash
+set -ex
+
+SCRIPT_DIR=$(dirname "$0")
+DB_DIR_PATH="$SCRIPT_DIR/../db"
+DB_FILE_PATH="$DB_DIR_PATH/score-sqlite3.db"
+DB_SOURCE="https://github.com/marinade-finance/staking-status/raw/main/scores.sqlite3"
+
+mkdir -p "$DB_DIR_PATH"
+curl -sfSL "$DB_SOURCE" -o "$DB_FILE_PATH"

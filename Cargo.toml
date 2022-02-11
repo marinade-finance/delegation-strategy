@@ -1,6 +1,8 @@
 [workspace]
 members = [
-  "programs/score-past-epoch"
+  "cli/score-past-epoch",
+  "cli/score-post-process",
+  "cli/cli-common"
 ]
 
 [profile.dev]

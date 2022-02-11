@@ -1,4 +1,5 @@
 use {
+    crate::rpc_client_utils::*,
     clap::{
         crate_description, crate_name, value_t, value_t_or_exit, App, AppSettings, Arg, ArgMatches,
         SubCommand,
@@ -12,15 +13,10 @@ use {
     },
     solana_client::rpc_client::RpcClient,
     solana_sdk::native_token::*,
-    std::{error, path::PathBuf, process, time::Duration},
+    std::{error, path::PathBuf, time::Duration},
 };
 
 type BoxResult<T> = Result<T, Box<dyn error::Error>>;
-
-fn default_confirmed_block_cache_path() -> PathBuf {
-    let home_dir = std::env::var("HOME").unwrap();
-    PathBuf::from(home_dir).join(".cache/solana/som/confirmed-block-cache/")
-}
 
 fn is_release_version(string: String) -> Result<(), String> {
     if string.starts_with('v') && semver::Version::parse(string.split_at(1).1).is_ok() {
@@ -122,13 +118,6 @@ pub struct Config {
 
     /// If true, enforce the `min_self_stake_lamports` limit. If false, only warn on insufficient stake
     pub enforce_min_self_stake: bool,
-
-    /// If true, enforce `min_testnet_staked_epochs`. If false, only warn if
-    /// `min_testnet_staked_epochs` is Some.
-    ///
-    /// This setting is ignored if `cluster` is not `"mainnet-beta"` or `min_testnet_participation
-    /// is `None`.
-    pub enforce_testnet_participation: bool,
 }
 
 impl Config {
@@ -155,7 +144,6 @@ impl Config {
             min_self_stake_lamports: 0,
             max_active_stake_lamports: u64::MAX,
             enforce_min_self_stake: false,
-            enforce_testnet_participation: false,
         }
     }
 
@@ -182,10 +170,6 @@ fn app_version() -> String {
 }
 
 pub fn get_config() -> BoxResult<(Config, RpcClient)> {
-    let default_confirmed_block_cache_path = default_confirmed_block_cache_path()
-        .to_str()
-        .unwrap()
-        .to_string();
     let app_version = &*app_version();
     let matches = App::new(crate_name!())
         .about(crate_description!())
@@ -315,14 +299,6 @@ pub fn get_config() -> BoxResult<(Config, RpcClient)> {
                 .help("Do not remove stake from validators running older \
                        software versions if more than this percentage of \
                        all validators are running an older software version")
-        )
-        .arg(
-            Arg::with_name("confirmed_block_cache_path")
-                .long("confirmed-block-cache-path")
-                .takes_value(true)
-                .value_name("PATH")
-                .default_value(&default_confirmed_block_cache_path)
-                .help("Base path of confirmed block cache")
         )
         .arg(
             Arg::with_name("max_infrastructure_concentration")
@@ -505,8 +481,6 @@ pub fn get_config() -> BoxResult<(Config, RpcClient)> {
     let min_self_stake_lamports = lamports_of_sol(&matches, "min_self_stake").unwrap();
     let max_active_stake_lamports = lamports_of_sol(&matches, "max_active_stake").unwrap();
 
-    let enforce_testnet_participation = matches.is_present("enforce_testnet_participation");
-
     let json_rpc_url = match cluster {
         Cluster::MainnetBeta => value_t!(matches, "json_rpc_url", String)
             .unwrap_or_else(|_| "http://api.mainnet-beta.solana.com".into()),
@@ -559,38 +533,13 @@ pub fn get_config() -> BoxResult<(Config, RpcClient)> {
         min_self_stake_lamports,
         max_active_stake_lamports,
         enforce_min_self_stake,
-        enforce_testnet_participation,
     };
 
     info!("RPC URL: {}", config.json_rpc_url);
     let rpc_client =
         RpcClient::new_with_timeout(config.json_rpc_url.clone(), Duration::from_secs(180));
 
-    {
-        let mut retries = 12u8;
-        let retry_delay = Duration::from_secs(10);
-        loop {
-            match rpc_client.get_health() {
-                Ok(()) => {
-                    info!("RPC endpoint healthy");
-                    break;
-                }
-                Err(err) => {
-                    warn!("RPC endpoint is unhealthy: {:?}", err);
-                }
-            }
-            if retries == 0 {
-                process::exit(1);
-            }
-            retries = retries.saturating_sub(1);
-            info!(
-                "{} retries remaining, sleeping for {} seconds",
-                retries,
-                retry_delay.as_secs()
-            );
-            std::thread::sleep(retry_delay);
-        }
-    }
+    rpc_client_health_check(&rpc_client);
 
     Ok((config, rpc_client))
 }

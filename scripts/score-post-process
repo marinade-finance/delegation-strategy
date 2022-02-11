@@ -1,0 +1,24 @@
+#!/bin/bash
+set -ex
+
+SCRIPT_DIR=$(dirname "$0")
+BIN_DIR="$SCRIPT_DIR/../target/debug"
+DATA_DIR="$SCRIPT_DIR/../db"
+
+# # Create temp/avg.csv file from sqlite database
+# "$SCRIPT_DIR/create-avg-file"
+#
+# # Get solana validators info as json file for current epoch_credits
+# solana validators --output json > "$DATA_DIR/solana-validators.json"
+#
+# # Get stakeview.app info for current APY
+# EPOCH=$(solana epoch-info|sed -n 's/Epoch: //p')
+# curl "https://stakeview.app/apy/$EPOCH.json" > "$DATA_DIR/current-epoch-apy.json"
+
+# post-process avg.csv generating post-process.csv
+date
+"$BIN_DIR/score-post-process" process-scores \
+  --apy-file "$DATA_DIR/current-epoch-apy.json" \
+  --avg-file "$DATA_DIR/avg.csv" \
+  --validators-file "$DATA_DIR/solana-validators.json" \
+  --result-file "$DATA_DIR/post-processed-scores.csv"

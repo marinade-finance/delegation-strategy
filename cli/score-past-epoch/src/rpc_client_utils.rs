@@ -1,10 +1,11 @@
 use {
+    log::*,
     solana_client::{
         rpc_client::RpcClient,
         rpc_response::{RpcVoteAccountInfo, RpcVoteAccountStatus},
     },
     solana_sdk::{clock::Epoch, pubkey::Pubkey},
-    std::{collections::HashMap, error, str::FromStr},
+    std::{collections::HashMap, error, process, str::FromStr, time::Duration},
 };
 
 pub struct VoteAccountInfo {
@@ -77,6 +78,32 @@ pub fn get_vote_account_info(
             .collect(),
         total_active_stake,
     ))
+}
+
+pub fn rpc_client_health_check(rpc_client: &RpcClient) -> () {
+    let mut retries = 12u8;
+    let retry_delay = Duration::from_secs(10);
+    loop {
+        match rpc_client.get_health() {
+            Ok(()) => {
+                info!("RPC endpoint healthy");
+                break;
+            }
+            Err(err) => {
+                warn!("RPC endpoint is unhealthy: {:?}", err);
+            }
+        }
+        if retries == 0 {
+            process::exit(1);
+        }
+        retries = retries.saturating_sub(1);
+        info!(
+            "{} retries remaining, sleeping for {} seconds",
+            retries,
+            retry_delay.as_secs()
+        );
+        std::thread::sleep(retry_delay);
+    }
 }
 
 #[cfg(test)]

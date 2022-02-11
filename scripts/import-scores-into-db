@@ -1,0 +1,10 @@
+#!/bin/bash
+set -ex
+
+SCRIPT_DIR=$(dirname "$0")
+SQL_DIR="$SCRIPT_DIR/../sql"
+
+date
+cd "$SQL_DIR"
+sqlite3 -cmd 'select 2' < "./import-score-into-db.sql"
+date
