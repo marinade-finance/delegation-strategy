@@ -64,9 +64,30 @@ pub struct ProcessScoresOptions {
     #[structopt(
         long = "pct-cap",
         help = "Cap max percentage of total stake given to a single validator",
-        default_value = "1"
+        default_value = "1" // %
     )]
     pct_cap: f64,
+
+    #[structopt(
+        long = "zero-score-max-stake-pct",
+        help = "Max percentage of total stake delegated to a zero-scored validator",
+        default_value = "0.45" // %
+    )]
+    zero_score_max_stake_pct: f64,
+
+    #[structopt(
+        long = "max-overstake-pct",
+        help = "Max pct value of marinade_staked / should_have before validator is considered unhealthy",
+        default_value = "250" // %
+    )]
+    max_overstake_pct: f64,
+
+    #[structopt(
+        long = "max-stake-delta-pct",
+        help = "Sets max stake delta for each validator to % of total Marinade stake",
+        default_value = "0.1" // %
+    )]
+    stake_delta_pct_cap: f64,
 }
 
 #[allow(dead_code)]
@@ -261,11 +282,54 @@ impl ProcessScoresOptions {
             total_stake_target,
         )?;
 
-        self.adjust_scores_for_unhealthy_overstaked(&mut validator_scores);
+        self.adjust_scores_for_overstaked(&mut validator_scores, total_stake_target);
 
         self.recompute_pct_with_capping(&mut validator_scores, total_stake_target)?;
 
+        self.cap_stake_delta(&mut validator_scores, total_stake_target)?;
+
         self.write_results_to_file(validator_scores)?;
+        Ok(())
+    }
+
+    fn cap_stake_delta(
+        &self,
+        validator_scores: &mut Vec<ValidatorScore>,
+        total_stake_target: u64,
+    ) -> anyhow::Result<()> {
+        let total_score = validator_scores.iter().map(|s| s.score as u64).sum();
+        let stake_delta_cap =
+            self.stake_delta_pct_cap / 100.0 * lamports_to_sol(total_stake_target);
+        info!(
+            "Stake delta cap is: {} ({} % m.stk)",
+            stake_delta_cap, self.stake_delta_pct_cap
+        );
+        for v in validator_scores.iter_mut() {
+            if v.marinade_staked > v.should_have {
+                continue;
+            }
+
+            let stake_delta = if v.marinade_staked < v.should_have {
+                v.should_have - v.marinade_staked
+            } else {
+                continue;
+            };
+
+            if stake_delta < stake_delta_cap {
+                continue;
+            }
+
+            v.score =
+                (v.score as f64 * (v.marinade_staked + stake_delta_cap) / v.should_have) as u32;
+            v.should_have = lamports_to_sol(proportional(
+                v.score as u64,
+                total_stake_target,
+                total_score,
+            )?);
+            // compute pct with 6 decimals precision
+            v.pct = (v.score as u64 * 100_000_000 / total_score) as f64 / 1_000_000.0;
+        }
+
         Ok(())
     }
 
@@ -510,7 +574,9 @@ impl ProcessScoresOptions {
 
         for v in validator_scores.iter_mut() {
             if blacklisted.contains(&v.vote_address) {
-                info!("blacklisted found {}", v.vote_address);
+                info!("Blacklisted validator found: {}", v.vote_address);
+                v.remove_level = 2;
+                v.remove_level_reason = format!("The validator {} is blacklisted", v.vote_address);
                 v.score = 0;
             }
         }
@@ -565,10 +631,13 @@ impl ProcessScoresOptions {
         Ok(())
     }
 
-    fn adjust_scores_for_unhealthy_overstaked(
+    fn adjust_scores_for_overstaked(
         &self,
         validator_scores: &mut Vec<ValidatorScore>,
+        total_stake_target: u64,
     ) -> () {
+        let total_stake_target = lamports_to_sol(total_stake_target);
+        let min_amount_to_care_about_overstake = 20000f64;
         // adjust score
         // we use v.should_have as score
         for v in validator_scores.iter_mut() {
@@ -577,7 +646,25 @@ impl ProcessScoresOptions {
             // unless this validator is marked for unstake
             v.score = if v.should_have < v.marinade_staked {
                 // unstake
-                if v.remove_level > 1 || v.score == 0 {
+                if v.remove_level > 1 {
+                    0
+                } else if v.score == 0
+                    && v.marinade_staked / total_stake_target
+                        > self.zero_score_max_stake_pct / 100.0
+                {
+                    v.remove_level = 2;
+                    v.remove_level_reason = format!("Outstanding overstake with zero score");
+                    0
+                } else if v.should_have > 0.0
+                    && v.marinade_staked > min_amount_to_care_about_overstake
+                    && v.marinade_staked / v.should_have > self.max_overstake_pct / 100.0
+                {
+                    info!("{} {}", v.marinade_staked, v.should_have);
+                    v.remove_level = 2;
+                    v.remove_level_reason = format!(
+                        "Staked more than {} % of the should_have",
+                        v.marinade_staked / v.should_have * 100.0
+                    );
                     0
                 } else if v.remove_level == 1 {
                     (v.marinade_staked * 0.5) as u32
@@ -595,7 +682,6 @@ impl ProcessScoresOptions {
         validator_scores: &mut Vec<ValidatorScore>,
         total_stake_target: u64,
     ) -> anyhow::Result<()> {
-        // recompute total score
         let total_score = validator_scores.iter().map(|s| s.score as u64).sum();
         let mut total_score_of_worse_or_same = total_score;
         let mut score_overflow_rem = 0u64;
