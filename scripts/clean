@@ -1,7 +1,7 @@
 #!/bin/bash
 set -ex
 
-SCRIPT_DIR=$(dirname "$0")
+SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
 DB_DIR="$SCRIPT_DIR/../db"
 
 rm -rf "$DB_DIR/score-all-mainnet-beta"

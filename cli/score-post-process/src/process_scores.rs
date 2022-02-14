@@ -84,7 +84,7 @@ pub struct ProcessScoresOptions {
 
     #[structopt(
         long = "max-stake-delta-pct",
-        help = "Sets max stake delta for each validator to % of total Marinade stake",
+        help = "Sets max stake delta for already staked validators to % of total Marinade stake",
         default_value = "0.1" // %
     )]
     stake_delta_pct_cap: f64,
@@ -221,26 +221,6 @@ impl ProcessScoresOptions {
     ) -> anyhow::Result<()> {
         let marinade = RpcMarinade::new(client, &common.instance.as_pubkey())?;
 
-        let rent_payer = if let Some(rent_payer) = common.rent_payer {
-            info!("Use rent payer = {}", rent_payer);
-            rent_payer.as_keypair()
-        } else {
-            info!("Use fee payer as rent payer");
-            common.fee_payer.as_keypair()
-        };
-        if let Some(account) = marinade.client.get_account_retrying(&rent_payer.pubkey())? {
-            if account.owner != system_program::ID {
-                error!(
-                    "Rent payer {} must be a system account",
-                    rent_payer.pubkey()
-                );
-                bail!(
-                    "Rent payer {} must be a system account",
-                    rent_payer.pubkey()
-                );
-            }
-        }
-
         let epoch_info = marinade.client.get_epoch_info()?;
 
         // Read file csv with averages into validator_scores:Vec
@@ -288,6 +268,9 @@ impl ProcessScoresOptions {
 
         self.cap_stake_delta(&mut validator_scores, total_stake_target)?;
 
+        // Sort validator_scores by score desc
+        validator_scores.sort_by(|a, b| b.score.cmp(&a.score));
+
         self.write_results_to_file(validator_scores)?;
         Ok(())
     }
@@ -305,6 +288,7 @@ impl ProcessScoresOptions {
             stake_delta_cap, self.stake_delta_pct_cap
         );
         for v in validator_scores.iter_mut() {
+            // only care about understaked
             if v.marinade_staked > v.should_have {
                 continue;
             }
@@ -315,10 +299,23 @@ impl ProcessScoresOptions {
                 continue;
             };
 
+            // if there is a huge relative understake
+            if stake_delta > 2.0 * v.marinade_staked {
+                // set score to 80 % of wanted score to make the stake grow a bit conservatively
+                v.score = (v.score as f64 * 0.8) as u32;
+                v.should_have = lamports_to_sol(proportional(
+                    v.score as u64,
+                    total_stake_target,
+                    total_score,
+                )?);
+                continue;
+            }
+
             if stake_delta < stake_delta_cap {
                 continue;
             }
 
+            // cap the score growth
             v.score =
                 (v.score as f64 * (v.marinade_staked + stake_delta_cap) / v.should_have) as u32;
             v.should_have = lamports_to_sol(proportional(

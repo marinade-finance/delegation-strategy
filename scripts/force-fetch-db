@@ -1,7 +1,7 @@
 #!/bin/bash
 set -ex
 
-SCRIPT_DIR=$(dirname "$0")
+SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
 DB_DIR_PATH="$SCRIPT_DIR/../db"
 DB_FILE_PATH="$DB_DIR_PATH/score-sqlite3.db"
 DB_SOURCE="https://github.com/marinade-finance/staking-status/raw/main/scores.sqlite3"

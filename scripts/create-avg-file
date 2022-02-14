@@ -1,10 +1,9 @@
 #!/bin/bash
 
-SCRIPT_DIR=$(dirname "$0")
-SQL_DIR="$SCRIPT_DIR/../sql"
+SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
 
 date
-cd "$SQL_DIR"
+cd "$SCRIPT_DIR"
 sqlite3 <<::END
 .open ../db/score-sqlite3.db
 .headers on

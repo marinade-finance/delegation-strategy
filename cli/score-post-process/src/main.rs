@@ -1,7 +1,7 @@
 #![cfg_attr(not(debug_assertions), deny(warnings))]
 
 use anyhow::bail;
-use cli_common::{Cluster, ExpandedPath, InputKeypair, InputPubkey};
+use cli_common::{Cluster, ExpandedPath, InputPubkey};
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::commitment_config::CommitmentConfig;
 // use utils::Cluster;
@@ -12,7 +12,6 @@ use std::{str::FromStr, sync::Arc};
 use structopt::StructOpt;
 
 pub mod process_scores;
-pub mod utils;
 
 use process_scores::ProcessScoresOptions;
 
@@ -20,13 +19,6 @@ use process_scores::ProcessScoresOptions;
 pub struct Common {
     #[structopt(short = "c", default_value = "~/.config/solana/cli/config.yml")]
     config_file: ExpandedPath,
-
-    #[structopt(
-        short = "f",
-        env = "FEE_PAYER",
-        default_value = "~/.config/solana/id.json"
-    )]
-    fee_payer: InputKeypair,
 
     #[structopt(
         short = "i",
@@ -37,8 +29,6 @@ pub struct Common {
         //default_value = "9tA9pzAZWimw2EMZgMjmUwzB2qPKrHhFNaC2ZvCrReeh"
     )]
     instance: InputPubkey,
-
-    rent_payer: Option<InputKeypair>,
 }
 
 #[derive(Debug, StructOpt)]
@@ -94,7 +84,6 @@ fn main() -> anyhow::Result<()> {
         CommitmentConfig::from_str(&cli_config.commitment).unwrap(),
     ));
 
-    info!("Using fee payer {}", params.common.fee_payer);
     Ok(match params.command {
         MardminCommand::ProcessScores(options) => options.process(params.common, client, cluster),
     }?)
