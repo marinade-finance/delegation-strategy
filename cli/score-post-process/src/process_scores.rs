@@ -64,7 +64,7 @@ pub struct ProcessScoresOptions {
     #[structopt(
         long = "pct-cap",
         help = "Cap max percentage of total stake given to a single validator",
-        default_value = "1" // %
+        default_value = "1.5" // %
     )]
     pct_cap: f64,
 
@@ -75,6 +75,7 @@ pub struct ProcessScoresOptions {
     )]
     zero_score_max_stake_pct: f64,
 
+    // if m.stk is less than 20 % of validator's stake - if full unstake is performed
     #[structopt(
         long = "max-overstake-pct",
         help = "Max pct value of marinade_staked / should_have before validator is considered unhealthy",
@@ -88,6 +89,13 @@ pub struct ProcessScoresOptions {
         default_value = "0.1" // %
     )]
     stake_delta_pct_cap: f64,
+
+    #[structopt(
+        long = "marinade-stake-share-pct-grace",
+        help = "If marinade's share on validator's stake is more than this value, it is not considered for emergency unstake in case of overstake",
+        default_value = "20" // %
+    )]
+    marinade_stake_share_pct_grace: f64,
 }
 
 #[allow(dead_code)]
@@ -638,6 +646,7 @@ impl ProcessScoresOptions {
         // adjust score
         // we use v.should_have as score
         for v in validator_scores.iter_mut() {
+            let mariande_stake_share_pct = 100.0 * v.marinade_staked / v.avg_active_stake;
             // if we need to unstake, set a score that's x% of what's staked
             // so we ameliorate how aggressive the stake bot is for the 0-marinade-staked
             // unless this validator is marked for unstake
@@ -648,19 +657,22 @@ impl ProcessScoresOptions {
                 } else if v.score == 0
                     && v.marinade_staked / total_stake_target
                         > self.zero_score_max_stake_pct / 100.0
+                    && mariande_stake_share_pct < self.marinade_stake_share_pct_grace
                 {
                     v.remove_level = 2;
-                    v.remove_level_reason = format!("Outstanding overstake with zero score");
+                    v.remove_level_reason = format!("Outstanding overstake with zero score (marinade stake is {} % of validator's stake)", mariande_stake_share_pct);
                     0
                 } else if v.should_have > 0.0
                     && v.marinade_staked > min_amount_to_care_about_overstake
                     && v.marinade_staked / v.should_have > self.max_overstake_pct / 100.0
+                    && mariande_stake_share_pct < self.marinade_stake_share_pct_grace
                 {
                     info!("{} {}", v.marinade_staked, v.should_have);
                     v.remove_level = 2;
                     v.remove_level_reason = format!(
-                        "Staked more than {} % of the should_have",
-                        v.marinade_staked / v.should_have * 100.0
+                        "Staked more than {} % of the should_have (marinade stake is {} % of validator's stake)",
+                        v.marinade_staked / v.should_have * 100.0,
+                        mariande_stake_share_pct
                     );
                     0
                 } else if v.remove_level == 1 {

@@ -20,10 +20,3 @@ docker run \
   --rm \
   --volume "$DB_PATH:/usr/local/db" \
   delegation-strategy ./scripts/score-post-process
-
-docker run \
-  --name delegation-strategy \
-  --user "$UID" \
-  --rm \
-  --volume "$DB_PATH:/usr/local/db" \
-  delegation-strategy ./scripts/import-post-processed-scores
