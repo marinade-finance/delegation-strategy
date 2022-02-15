@@ -381,6 +381,11 @@ impl ProcessScoresOptions {
             self.avg_file
         );
 
+        assert!(
+            validator_scores.len() > 1000,
+            "Too little validators found in the CSV with average scores"
+        );
+
         Ok(validator_scores)
     }
 
@@ -427,6 +432,10 @@ impl ProcessScoresOptions {
                 let mut sum_apy: f64 = 0.0;
                 match validators {
                     serde_json::Value::Array(list) => {
+                        assert!(
+                            list.len() > 1000,
+                            "Too little validators found in the APY report"
+                        );
                         for apy_info in list {
                             if let Some(index) =
                                 validator_indices.get(apy_info["vote"].as_str().unwrap())
@@ -480,6 +489,10 @@ impl ProcessScoresOptions {
 
         match validators {
             serde_json::Value::Array(list) => {
+                assert!(
+                    list.len() > 1000,
+                    "Too little validators found in the result of `solana validators` command"
+                );
                 for json_info in list {
                     if let Some(index) =
                         validator_indices.get(json_info["voteAccountPubkey"].as_str().unwrap())
