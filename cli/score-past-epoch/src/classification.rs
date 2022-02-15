@@ -501,8 +501,7 @@ pub fn classify(
             if config.max_infrastructure_concentration.is_some() {
                 return Err(err);
             }
-            warn!("infrastructure concentration skipped: {}", err);
-            crate::data_center_info::DataCenters::default()
+            panic!("infrastructure concentration calc. failed: {}", err);
         }
     };
 
@@ -845,6 +844,8 @@ pub fn classify(
         Some(validator_classifications)
     };
     notes.push(format!("Active stake: {}", Sol(total_active_stake)));
+
+    info!("Notes: {}", notes.join("\n"));
 
     Ok(EpochClassificationV1 {
         data_center_info: data_centers.info,

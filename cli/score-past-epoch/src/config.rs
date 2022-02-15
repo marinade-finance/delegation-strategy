@@ -7,9 +7,7 @@ use {
     log::*,
     solana_clap_utils::{
         input_parsers::lamports_of_sol,
-        input_validators::{
-            is_amount, is_keypair, is_parsable, is_pubkey_or_keypair, is_url, is_valid_percentage,
-        },
+        input_validators::{is_amount, is_parsable, is_url, is_valid_percentage},
     },
     solana_client::rpc_client::RpcClient,
     solana_sdk::native_token::*,
@@ -196,18 +194,6 @@ pub fn get_config() -> BoxResult<(Config, RpcClient)> {
                 .help("Name of the cluster to operate on")
         )
         .arg(
-            Arg::with_name("confirm")
-                .long("confirm")
-                .takes_value(false)
-                .help("Confirm that the stake adjustments should actually be made")
-        )
-        .arg(
-            Arg::with_name("markdown")
-                .long("markdown")
-                .takes_value(false)
-                .help("Output markdown")
-        )
-        .arg(
             Arg::with_name("db_path")
                 .long("db-path")
                 .value_name("PATH")
@@ -352,73 +338,6 @@ pub fn get_config() -> BoxResult<(Config, RpcClient)> {
                 .takes_value(false)
                 .help("Enforce the minimum testnet participation requirement.\n
                        This setting is ignored if the --cluster is not `mainnet-beta`")
-        )
-        .subcommand(
-            SubCommand::with_name("stake-pool-v0").about("Use the stake-pool v0 solution")
-            .arg(
-                Arg::with_name("reserve_stake_address")
-                    .index(1)
-                    .value_name("RESERVE_STAKE_ADDRESS")
-                    .takes_value(true)
-                    .required(true)
-                    .validator(is_pubkey_or_keypair)
-                    .help("The reserve stake account used to fund the stake pool")
-            )
-            .arg(
-                Arg::with_name("authorized_staker")
-                    .index(2)
-                    .value_name("KEYPAIR")
-                    .validator(is_keypair)
-                    .required(true)
-                    .takes_value(true)
-                    .help("Keypair of the authorized staker")
-            )
-            .arg(
-                Arg::with_name("min_reserve_stake_balance")
-                    .long("min-reserve-stake-balance")
-                    .value_name("SOL")
-                    .takes_value(true)
-                    .default_value("1")
-                    .validator(is_amount)
-                    .help("The minimum balance to keep in the reserve stake account")
-            )
-            .arg(
-                Arg::with_name("baseline_stake_amount")
-                    .long("baseline-stake-amount")
-                    .value_name("SOL")
-                    .takes_value(true)
-                    .default_value("5000")
-                    .validator(is_amount)
-            )
-        )
-        .subcommand(
-            SubCommand::with_name("stake-pool").about("Use a stake pool")
-            .arg(
-                Arg::with_name("pool_address")
-                    .index(1)
-                    .value_name("POOL_ADDRESS")
-                    .takes_value(true)
-                    .required(true)
-                    .validator(is_pubkey_or_keypair)
-                    .help("The stake pool address")
-            )
-            .arg(
-                Arg::with_name("authorized_staker")
-                    .index(2)
-                    .value_name("KEYPAIR")
-                    .validator(is_keypair)
-                    .required(true)
-                    .takes_value(true)
-                    .help("Keypair of the authorized staker")
-            )
-            .arg(
-                Arg::with_name("baseline_stake_amount")
-                    .long("baseline-stake-amount")
-                    .value_name("SOL")
-                    .takes_value(true)
-                    .default_value("5000")
-                    .validator(is_amount)
-            )
         )
         .subcommand(
             SubCommand::with_name("score-all").about("Score all validators in the cluster")

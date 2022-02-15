@@ -11,7 +11,7 @@ BIN_DIR="$SCRIPT_DIR/../target/debug"
 "$SCRIPT_DIR/force-fetch-db"
 
 # Score past epoch, the results are available in db/score-all-mainnet-beta directory
-"$BIN_DIR/score-past-epoch" --cluster mainnet-beta --markdown  $* \
+"$BIN_DIR/score-past-epoch" --cluster mainnet-beta --min-release-version 1.8.12 $* \
    score-all \
    --score-max-commission 10 \
    --score-min-stake 100 \
