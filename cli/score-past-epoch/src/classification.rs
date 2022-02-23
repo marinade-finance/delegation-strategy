@@ -73,7 +73,10 @@ pub struct ScoreData {
     pub commission: u8,
     pub active_stake: u64,
     pub data_center_concentration: f64,
+    pub data_center_location: String,
+    pub data_center_asn: u64,
     pub validators_app_info: ByIdentityInfo,
+    pub version: String,
 }
 
 #[derive(Default, Clone, Deserialize, Serialize)]
@@ -555,6 +558,19 @@ pub fn classify(
         HashMap::new()
     };
 
+    let cluster_nodes_versions: HashMap<String, _> = rpc_client
+        .get_cluster_nodes()?
+        .into_iter()
+        .filter_map(|rpc_contact_info| {
+            if let Some(ref version) = rpc_contact_info.version {
+                if let Ok(semver) = semver::Version::parse(version) {
+                    return Some((rpc_contact_info.pubkey, semver));
+                }
+            }
+            None
+        })
+        .collect();
+
     let (cluster_nodes_with_old_version, min_release_version): (HashMap<String, _>, _) =
         match config.min_release_version {
             Some(ref min_release_version) => (
@@ -821,7 +837,13 @@ pub fn classify(
                         commission,
                         active_stake,
                         data_center_concentration: data_center_info.stake_percent,
+                        data_center_asn: data_center_info.id.asn,
+                        data_center_location: data_center_info.id.location.clone(),
                         validators_app_info,
+                        version: cluster_nodes_versions
+                            .get(&identity.to_string())
+                            .unwrap_or(&semver::Version::parse("0.0.0")?)
+                            .to_string(),
                     }),
                     stake_action: None,
                     stake_state_reason: reason,

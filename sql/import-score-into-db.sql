@@ -14,10 +14,13 @@ CREATE TABLE imported(
   active_stake INTEGER,
   epoch_credits INTEGER,
   data_center_concentration DOUBLE,
+  data_center_asn INTEGER,
+  data_center_location TEXT,
   can_halt_the_network_group BOOL,
   stake_state TEXT,
   stake_state_reason TEXT,
-  www_url TEXT
+  www_url TEXT,
+  version TEXT
 );
 
 -- import stake-o-matic data
@@ -30,10 +33,12 @@ delete FROM imported where identity='identity';
 ALTER table imported add pct FLOAT;
 ALTER table imported add stake_conc FLOAT;
 ALTER table imported add adj_credits INTEGER;
+ALTER table imported add max_commission SHORT;
 UPDATE imported set
      pct = round(score * 100.0 / (select sum(score) from imported),4),
      stake_conc = round(active_stake * 100.0 / (select sum(active_stake) from imported),4),
-     adj_credits = CAST((epoch_credits * (100-commission-3*data_center_concentration)/100) as INTEGER)
+     adj_credits = CAST((epoch_credits * (100-commission-3*data_center_concentration)/100) as INTEGER),
+     max_commission = max(commission, COALESCE((select max(commission) from scores where scores.vote_address = imported.vote_address), 0))
    ;
 
 --recompute avg_position based on adj_credits
@@ -64,11 +69,60 @@ select 'avg epoch_credits',avg(epoch_credits),
  from imported
  where pct>0;
 
+alter table scores rename to scores_temp; -- rm
+
 -- add imported epoch to table scores
 create TABLE if not EXISTS scores as select * from imported;
 DELETE FROM scores where epoch = (select DISTINCT epoch from imported);
 INSERT INTO scores select * from imported;
 
+INSERT INTO scores (
+  epoch,
+keybase_id,
+name,
+identity,
+vote_address,
+score,
+avg_position,
+commission,
+active_stake,
+epoch_credits,
+data_center_concentration,
+data_center_asn,
+data_center_location,
+can_halt_the_network_group,
+stake_state,
+stake_state_reason,
+www_url,
+version,
+pct,
+stake_conc,
+adj_credits,
+max_commission
+) select epoch,
+keybase_id,
+name,
+identity,
+vote_address,
+score,
+avg_position,
+commission,
+active_stake,
+epoch_credits,
+data_center_concentration,
+NULL,
+NULL,
+can_halt_the_network_group,
+stake_state,
+stake_state_reason,
+www_url,
+"0.0.0",
+pct,
+stake_conc,
+adj_credits,
+NULL
+ from scores_temp; -- rm
+drop table scores_temp; -- rm
 
 -- recompute avg table with last 5 epochs
 -- if score=0 from imported => below nakamoto coefficient, or commission 100% or less than 100 SOL staked
@@ -78,10 +132,10 @@ DROP TABLE IF EXISTS avg;
 create table AVG as
 select 0 as rank, epoch,keybase_id, vote_address,name,
    case when score=0 or mult<=0 or score_records<5 or COALESCE(avg_active_stake,0)<100 then 0 else ROUND(base_score*mult) end as avg_score,
-   base_score, ap-49 mult, ap as avg_pos, commission, round(c2,2) as avg_commiss, dcc2,
+   base_score, ap-49 mult, ap as avg_pos, commission, max_commission, round(c2,2) as avg_commiss, dcc2, data_center_asn, data_center_location,
    epoch_credits, cast(ec2 as integer) as avg_ec, epoch_credits-ec2 as delta_credits,
    0.0 as pct, score_records, avg_active_stake,
-   can_halt_the_network_group, identity, stake_conc
+   can_halt_the_network_group, identity, stake_conc, www_url as url, version
 from imported A
 left outer JOIN (
        select count(*) as score_records,

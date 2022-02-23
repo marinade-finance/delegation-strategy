@@ -110,8 +110,11 @@ struct ValidatorScoreRecord {
     score: u32,
     average_position: f64,
     commission: u8,
+    max_commission: u8,
     epoch_credits: u64,
     data_center_concentration: f64,
+    data_center_asn: u64,
+    data_center_location: String,
     base_score: f64,
     mult: f64,
     avg_score: f64,
@@ -119,6 +122,8 @@ struct ValidatorScoreRecord {
     can_halt_the_network_group: bool,
     identity: String,
     stake_conc: f64,
+    url: String,
+    version: String,
 }
 
 // post-process data
@@ -131,8 +136,11 @@ struct ValidatorScore {
     credits_observed: u64,
     vote_address: String,
     commission: u8,
+    max_commission: u8,
     average_position: f64,
     data_center_concentration: f64,
+    data_center_asn: u64,
+    data_center_location: String,
     avg_active_stake: f64,
     apy: Option<f64>,
     delinquent: bool,
@@ -147,6 +155,8 @@ struct ValidatorScore {
     identity: String,
     stake_concentration: f64,
     base_score: u64,
+    url: String,
+    version: String,
 }
 
 impl ValidatorScore {
@@ -356,8 +366,11 @@ impl ProcessScoresOptions {
                 credits_observed: record.epoch_credits,
                 vote_address: record.vote_address,
                 commission: record.commission,
+                max_commission: record.max_commission,
                 average_position: record.average_position,
                 data_center_concentration: record.data_center_concentration,
+                data_center_asn: record.data_center_asn,
+                data_center_location: record.data_center_location,
                 avg_active_stake: record.avg_active_stake,
                 apy: None,
                 delinquent: false,
@@ -372,6 +385,8 @@ impl ProcessScoresOptions {
                 under_nakamoto_coefficient: record.can_halt_the_network_group,
                 stake_concentration: record.stake_conc,
                 base_score: record.base_score as u64,
+                url: record.url,
+                version: record.version,
             });
         }
 

@@ -20,8 +20,11 @@ CREATE TABLE post_process_imported(
   credits_observed INTEGER,
   vote_address TEXT,
   commission INTEGER,
+  max_commission INTEGER,
   average_position DOUBLE,
   data_center_concentration DOUBLE,
+  data_center_asn SHORT,
+  data_center_location TEXT,
   avg_active_stake INTEGER,
   apy DOUBLE,
   delinquent BOOL,
@@ -35,7 +38,9 @@ CREATE TABLE post_process_imported(
   keybase_id TEXT,
   identity TEXT,
   stake_concentration DOUBLE,
-  base_score INTEGER
+  base_score INTEGER,
+  url TEXT,
+  version TEXT
 );
 
 -- import post_process data
@@ -52,18 +57,26 @@ create table if not exists scores2 as select * from post_process_imported where 
 delete from scores2
 where epoch = (select distinct epoch from post_process_imported);
 
+alter table scores2 rename to scores2_temp; -- rm
+create table if not exists scores2 as select epoch ,  rank ,  score,   name ,  credits_observed ,  vote_address ,
+commission , commission as max_commission,  average_position ,  data_center_concentration, NULL as data_center_asn, NULL as data_center_location ,  avg_active_stake ,
+apy ,  delinquent ,  this_epoch_credits ,  pct ,  marinade_staked ,  should_have  ,
+remove_level ,  remove_level_reason,  under_nakamoto_coefficient ,  keybase_id ,  identity ,  stake_concentration ,  base_score, NULL as url, NULL as version from scores2_temp; -- rm
+
 insert into scores2
   (epoch ,  rank ,  score,   name ,  credits_observed ,  vote_address ,
-  commission ,  average_position ,  data_center_concentration ,  avg_active_stake ,
+  commission ,  max_commission,  average_position ,  data_center_concentration ,  data_center_asn ,  data_center_location ,  avg_active_stake ,
   apy ,  delinquent ,  this_epoch_credits ,  pct ,  marinade_staked ,  should_have  ,
-  remove_level ,  remove_level_reason,  under_nakamoto_coefficient ,  keybase_id ,  identity ,  stake_concentration ,  base_score )
+  remove_level ,  remove_level_reason,  under_nakamoto_coefficient ,  keybase_id ,  identity ,  stake_concentration ,  base_score ,  url ,  version)
 select
-  epoch ,  rank ,  score,   name ,  credits_observed ,  vote_address ,
-  commission ,  average_position ,  data_center_concentration ,  avg_active_stake ,
-  apy ,  delinquent ,  this_epoch_credits ,  pct ,  marinade_staked ,  should_have  ,
-  remove_level ,  remove_level_reason,  under_nakamoto_coefficient ,  keybase_id ,  identity ,  stake_concentration ,  base_score
+epoch ,  rank ,  score,   name ,  credits_observed ,  vote_address ,
+commission ,  max_commission,  average_position ,  data_center_concentration ,  data_center_asn ,  data_center_location ,  avg_active_stake ,
+apy ,  delinquent ,  this_epoch_credits ,  pct ,  marinade_staked ,  should_have  ,
+remove_level ,  remove_level_reason,  under_nakamoto_coefficient ,  keybase_id ,  identity ,  stake_concentration ,  base_score ,  url ,  version
   from post_process_imported
   ;
+
+  drop table scores2_temp; -- rm
 
 -- show top validators with pct assgined (informative)
 .mode column
