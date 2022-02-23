@@ -45,7 +45,6 @@ UPDATE imported set
 update imported
 set avg_position = adj_credits * 50 / (select avg(adj_credits) from scores B where adj_credits>30000);
 
-
 --control, show total staked
 select DISTINCT epoch from imported;
 select 'validators',count(*),'total staked',sum(active_stake) from imported;
@@ -69,60 +68,10 @@ select 'avg epoch_credits',avg(epoch_credits),
  from imported
  where pct>0;
 
-alter table scores rename to scores_temp; -- rm
-
 -- add imported epoch to table scores
 create TABLE if not EXISTS scores as select * from imported;
 DELETE FROM scores where epoch = (select DISTINCT epoch from imported);
 INSERT INTO scores select * from imported;
-
-INSERT INTO scores (
-  epoch,
-keybase_id,
-name,
-identity,
-vote_address,
-score,
-avg_position,
-commission,
-active_stake,
-epoch_credits,
-data_center_concentration,
-data_center_asn,
-data_center_location,
-can_halt_the_network_group,
-stake_state,
-stake_state_reason,
-www_url,
-version,
-pct,
-stake_conc,
-adj_credits,
-max_commission
-) select epoch,
-keybase_id,
-name,
-identity,
-vote_address,
-score,
-avg_position,
-commission,
-active_stake,
-epoch_credits,
-data_center_concentration,
-NULL,
-NULL,
-can_halt_the_network_group,
-stake_state,
-stake_state_reason,
-www_url,
-"0.0.0",
-pct,
-stake_conc,
-adj_credits,
-NULL
- from scores_temp; -- rm
-drop table scores_temp; -- rm
 
 -- recompute avg table with last 5 epochs
 -- if score=0 from imported => below nakamoto coefficient, or commission 100% or less than 100 SOL staked
