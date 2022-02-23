@@ -96,6 +96,12 @@ pub struct ProcessScoresOptions {
         default_value = "20" // %
     )]
     marinade_stake_share_pct_grace: f64,
+
+    #[structopt(
+        long = "skip-marinade-specific-rules",
+        help = "Skips rules based on Marinade stake"
+    )]
+    skip_marinade_specific_rules: bool,
 }
 
 #[allow(dead_code)]
@@ -266,28 +272,38 @@ impl ProcessScoresOptions {
         // Some validators do not play fair, let's set their scores to 0
         self.apply_blacklist(&mut validator_scores);
 
-        // imagine a +100K stake delta
-        let total_stake_target = marinade
-            .state
-            .validator_system
-            .total_active_balance
-            .saturating_add(sol_to_lamports(100000.0));
+        if !self.skip_marinade_specific_rules {
+            // imagine a +100K stake delta
+            let total_stake_target = marinade
+                .state
+                .validator_system
+                .total_active_balance
+                .saturating_add(sol_to_lamports(100000.0));
 
-        // Compute marinade staked & should_have from the current on-chain validator data
-        self.update_with_current_marinade_validators(
-            &marinade,
-            &mut validator_scores,
-            total_stake_target,
-        )?;
+            // Compute marinade staked & should_have from the current on-chain validator data
+            self.update_with_current_marinade_validators(
+                &marinade,
+                &mut validator_scores,
+                total_stake_target,
+            )?;
 
-        self.adjust_scores_for_overstaked(&mut validator_scores, total_stake_target);
+            self.adjust_scores_for_overstaked(&mut validator_scores, total_stake_target);
 
-        self.recompute_pct_with_capping(&mut validator_scores, total_stake_target)?;
+            self.recompute_pct_with_capping(&mut validator_scores, total_stake_target)?;
 
-        self.cap_stake_delta(&mut validator_scores, total_stake_target)?;
+            self.cap_stake_delta(&mut validator_scores, total_stake_target)?;
+        }
 
         // Sort validator_scores by score desc
         validator_scores.sort_by(|a, b| b.score.cmp(&a.score));
+
+        if self.skip_marinade_specific_rules {
+            let mut rank = 1;
+            validator_scores.iter_mut().for_each(|s| {
+                s.rank = rank;
+                rank += 1;
+            });
+        }
 
         self.write_results_to_file(validator_scores)?;
         Ok(())
