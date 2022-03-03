@@ -1,0 +1,16 @@
+#!/bin/bash
+
+SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
+
+date
+cd "$SCRIPT_DIR"
+sqlite3 <<::END
+.open ../db/score-sqlite3.db
+.headers on
+.mode csv
+.output ../db/post-processed-scores-from-db.csv
+SELECT epoch,rank,score,name,credits_observed,vote_address,commission,max_commission,average_position,data_center_concentration,data_center_asn,data_center_location,avg_active_stake,apy,delinquent,this_epoch_credits,pct,marinade_staked,should_have,remove_level,remove_level_reason,under_nakamoto_coefficient,keybase_id,identity,stake_concentration,base_score,url,version
+ FROM post_process_imported
+ order by rank asc;
+.quit
+::END

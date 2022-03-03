@@ -176,7 +176,7 @@ impl ValidatorScore {
     /// when commission<HEALTHY_VALIDATOR_MAX_COMMISSION (30%)
     /// AND when average_position > 40 (50=average, 40=> at most 10% below average credits_observed)
     /// returns: 0=healthy, 1=warn (score *= 0.5), 2=unstake, 3=unstake & remove from list
-    pub fn is_healthy(&self, avg_apy: f64, avg_this_epoch_credits: u64) -> (u8, String) {
+    pub fn is_healthy(&self, avg_this_epoch_credits: u64) -> (u8, String) {
         //
         // remove from concentrated validators
         if self.under_nakamoto_coefficient {
@@ -223,13 +223,8 @@ impl ValidatorScore {
             ); // keep delinquent validators in the list so people can escape by depositing stake accounts from them into Marinade
         } else if self.credits_observed == 0 {
             return (2, format!("ZERO CREDITS")); // keep them in the list so people can escape by depositing stake accounts from them into Marinade
-        } else if self.apy.unwrap_or(6.0) < avg_apy / 2.0 {
-            (2, format!("VERY Low APY {}%", self.apy.unwrap()))
-        } else if self.apy.unwrap_or(6.0) < avg_apy * 0.80 {
-            (1, format!("Low APY {}%", self.apy.unwrap()))
         } else if self.average_position < MIN_AVERAGE_POSITION {
             (1, format!("Low avg pos {}%", self.average_position))
-            //
         } else {
             (0, "healthy".into())
         }
@@ -261,13 +256,13 @@ impl ProcessScoresOptions {
         );
 
         // Get APY Data from stakeview.app
-        let avg_apy = self.load_apy_file(&mut validator_scores)?;
+        self.load_apy_file(&mut validator_scores)?;
 
         // Get this_epoch_credits & delinquent data from 'solana validators' output
         let avg_this_epoch_credits = self.load_solana_validators_file(&mut validator_scores)?;
 
         // Find unhealthy validators and set their scores to 0 or 50 %
-        self.decrease_scores_for_unhealthy(&mut validator_scores, avg_apy, avg_this_epoch_credits);
+        self.decrease_scores_for_unhealthy(&mut validator_scores, avg_this_epoch_credits);
 
         // Some validators do not play fair, let's set their scores to 0
         self.apply_blacklist(&mut validator_scores);
@@ -292,6 +287,8 @@ impl ProcessScoresOptions {
             self.recompute_pct_with_capping(&mut validator_scores, total_stake_target)?;
 
             self.cap_stake_delta(&mut validator_scores, total_stake_target)?;
+
+            self.check_final_scores(&validator_scores);
         }
 
         // Sort validator_scores by score desc
@@ -307,6 +304,23 @@ impl ProcessScoresOptions {
 
         self.write_results_to_file(validator_scores)?;
         Ok(())
+    }
+
+    fn check_final_scores(&self, validator_scores: &Vec<ValidatorScore>) -> () {
+        let total_score: u64 = validator_scores.iter().map(|s| s.score as u64).sum();
+        let count_of_positive_validators = validator_scores.iter().filter(|s| s.score > 0).count();
+
+        log::info!("Total score: {}", total_score);
+        log::info!(
+            "Count of validators with positive score: {}",
+            count_of_positive_validators
+        );
+
+        assert!(total_score > 0, "Total score must be a positive number!");
+        assert!(
+            count_of_positive_validators > 300,
+            "Total score of validators with positive score is too low!"
+        );
     }
 
     fn cap_stake_delta(
@@ -568,12 +582,11 @@ impl ProcessScoresOptions {
     fn decrease_scores_for_unhealthy(
         &self,
         validator_scores: &mut Vec<ValidatorScore>,
-        avg_apy: f64,
         avg_this_epoch_credits: u64,
     ) -> () {
         info!("Set score = 0 if validator is not healthy (catch validators unhealthy now in this epoch)");
         for v in validator_scores.iter_mut() {
-            let (remove_level, reason) = v.is_healthy(avg_apy, avg_this_epoch_credits);
+            let (remove_level, reason) = v.is_healthy(avg_this_epoch_credits);
             v.remove_level = remove_level;
             v.remove_level_reason = reason;
             // if it is not healthy, adjust score to zero
@@ -619,6 +632,9 @@ impl ProcessScoresOptions {
             // VymD
             // Vote lagging
             "8Pep3GmYiijRALqrMKpez92cxvF4YPTzoZg83uXh14pW".into(),
+            // Parrot
+            // Down for ~2 weeks
+            "GBU4potq4TjsmXCUSJXbXwnkYZP8725ZEaeDrLrdQhbA".into(),
         ];
 
         for v in validator_scores.iter_mut() {
@@ -664,7 +680,7 @@ impl ProcessScoresOptions {
                         }
                     })
                     .collect();
-                let sum_stake = validator_stakes
+                let sum_stake: u64 = validator_stakes
                     .iter()
                     .map(|s| s.record.last_update_delegated_lamports)
                     .sum();
