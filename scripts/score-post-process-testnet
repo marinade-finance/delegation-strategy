@@ -1,0 +1,23 @@
+#!/bin/bash
+set -ex
+
+SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
+BIN_DIR="$SCRIPT_DIR/../target/debug"
+DATA_DIR="$SCRIPT_DIR/../db"
+
+# Create temp/avg.csv file from sqlite database
+"$SCRIPT_DIR/create-avg-file"
+
+# Get solana validators info as json file for current epoch_credits
+solana validators --output json > "$DATA_DIR/solana-validators.json"
+
+# post-process avg.csv generating post-process.csv
+date
+"$BIN_DIR/score-post-process" process-scores $@ \
+  --avg-file "$DATA_DIR/avg.csv" \
+  --validators-file "$DATA_DIR/solana-validators.json" \
+  --result-file "$DATA_DIR/post-processed-scores.csv" \
+  --skip-marinade-specific-rules
+
+# Import scores to db
+"$SCRIPT_DIR/import-post-processed-scores"

@@ -3,6 +3,22 @@ set -ex
 
 SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
 SQL_DIR="$SCRIPT_DIR/../sql"
+CSV_CP_TARGET="$SCRIPT_DIR/../db/validator-detail.csv"
+
+SOURCE_CSV_PATH="$1"
+if [[ -z $SOURCE_CSV_PATH ]]
+then
+  echo "Usage: $0 <source-csv-path>"
+  exit 1
+fi
+
+if ! [[ -f $SOURCE_CSV_PATH ]]
+then
+  echo "File $SOURCE_CSV_PATH not found!"
+  exit 1
+fi
+
+cp "$SOURCE_CSV_PATH" "$CSV_CP_TARGET"
 
 date
 cd "$SQL_DIR"

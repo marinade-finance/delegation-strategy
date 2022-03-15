@@ -23,9 +23,34 @@ CREATE TABLE imported(
   version TEXT
 );
 
+create TABLE if not EXISTS scores(
+  epoch INT,
+  keybase_id TEXT,
+  name TEXT,
+  identity TEXT,
+  vote_address TEXT,
+  score INTEGER,
+  avg_position REAL,
+  commission SHORT,
+  active_stake INTEGER,
+  epoch_credits INTEGER,
+  data_center_concentration DOUBLE,
+  data_center_asn INTEGER,
+  data_center_location TEXT,
+  can_halt_the_network_group BOOL,
+  stake_state TEXT,
+  stake_state_reason TEXT,
+  www_url TEXT,
+  version TEXT,
+  pct FLOAT,
+  stake_conc FLOAT,
+  adj_credits INTEGER,
+  max_commission SHORT
+);
+
 -- import stake-o-matic data
 .mode csv
-.import ../db/score-all-mainnet-beta/mainnet-beta-validator-detail.csv imported
+.import ../db/validator-detail.csv imported
 --remove header row
 delete FROM imported where identity='identity';
 

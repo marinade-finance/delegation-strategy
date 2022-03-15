@@ -4,4 +4,6 @@ set -ex
 SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
 DB_DIR="$SCRIPT_DIR/../db"
 
+rm -f "$DB_DIR/score-sqlite3.db"
 rm -rf "$DB_DIR/score-all-mainnet-beta"
+rm -rf "$DB_DIR/score-all-testnet"
