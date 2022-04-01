@@ -133,9 +133,9 @@ create table temp as select vote_address, RANK() over (order by avg_score DESC) 
 update avg
 set rank = (select rank from temp where temp.vote_address=avg.vote_address);
 
--- SELECT TOP 300
+-- SELECT TOP 250
 drop table if exists temp;
-create table temp as select * from avg order by avg_score desc LIMIT 300;
+create table temp as select * from avg order by avg_score desc LIMIT 250;
 -- set pct ONLY ON selected TOP validators
 update avg as U
 set pct = avg_score / (select sum(A.avg_score) from temp A where A.epoch = U.epoch) * 100
