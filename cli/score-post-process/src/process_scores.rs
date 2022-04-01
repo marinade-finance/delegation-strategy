@@ -183,12 +183,17 @@ impl ValidatorScore {
             return (
                 2,
                 format!(
-                    "under Nakamoto coefficient. Staked:{} {}% of total",
-                    self.avg_active_stake as u64, self.stake_concentration
+                    "The validator is in the concentrated group (under the Nakamoto coefficient)."
                 ),
             );
         } else if self.commission > HEALTHY_VALIDATOR_MAX_COMMISSION {
-            return (3, format!("High commission {}%", self.commission));
+            return (
+                3,
+                format!(
+                    "The commission {}% is above {}%",
+                    self.commission, HEALTHY_VALIDATOR_MAX_COMMISSION
+                ),
+            );
         // Note: self.delinquent COMMENTED, a good validator could be delinquent for several minutes during an upgrade
         // it's better to consider this_epoch_credits as filter and not the on/off flag of self.delinquent
         // } else if self.delinquent {
@@ -197,9 +202,7 @@ impl ValidatorScore {
             return (
                 2,
                 format!(
-                    "Very Low this_epoch_credits {}, average:{}, {}%",
-                    self.this_epoch_credits,
-                    avg_this_epoch_credits,
+                    "The validator has very low production ({}% of credits average).",
                     if avg_this_epoch_credits == 0 {
                         0
                     } else {
@@ -211,9 +214,7 @@ impl ValidatorScore {
             return (
                 1,
                 format!(
-                    "Low this_epoch_credits {}, average:{}, {}%",
-                    self.this_epoch_credits,
-                    avg_this_epoch_credits,
+                    "The validator has low production ({}% of credits average).",
                     if avg_this_epoch_credits == 0 {
                         0
                     } else {
@@ -222,9 +223,12 @@ impl ValidatorScore {
                 ),
             ); // keep delinquent validators in the list so people can escape by depositing stake accounts from them into Marinade
         } else if self.credits_observed == 0 {
-            return (2, format!("ZERO CREDITS")); // keep them in the list so people can escape by depositing stake accounts from them into Marinade
+            return (2, format!("Zero credits observed.")); // keep them in the list so people can escape by depositing stake accounts from them into Marinade
         } else if self.average_position < MIN_AVERAGE_POSITION {
-            (1, format!("Low avg pos {}%", self.average_position))
+            (
+                1,
+                format!("Low average position {}%.", self.average_position),
+            )
         } else {
             (0, "healthy".into())
         }
@@ -641,7 +645,7 @@ impl ProcessScoresOptions {
             if blacklisted.contains(&v.vote_address) {
                 info!("Blacklisted validator found: {}", v.vote_address);
                 v.remove_level = 2;
-                v.remove_level_reason = format!("The validator {} is blacklisted", v.vote_address);
+                v.remove_level_reason = format!("The validator is blacklisted for bad behavior.");
                 v.score = 0;
             }
         }
