@@ -9,7 +9,7 @@ DATA_DIR="$SCRIPT_DIR/../db"
 "$SCRIPT_DIR/create-avg-file"
 
 # Get solana validators info as json file for current epoch_credits
-solana validators --output json > "$DATA_DIR/solana-validators.json"
+solana validators -ut --output json > "$DATA_DIR/solana-validators.json"
 
 # post-process avg.csv generating post-process.csv
 date

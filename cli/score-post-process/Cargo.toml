@@ -25,6 +25,7 @@ solana-logger = "1.7.11"
 solana-sdk = "1.7.11"
 marinade-finance = { git = "https://github.com/marinade-finance/liquid-staking-program" }
 cli-common = { path = "../cli-common" }
+semver = "1.0.3"
 
 [profile.release]
 overflow-checks = true

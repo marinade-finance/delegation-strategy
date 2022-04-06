@@ -102,6 +102,12 @@ pub struct ProcessScoresOptions {
         help = "Skips rules based on Marinade stake"
     )]
     skip_marinade_specific_rules: bool,
+
+    #[structopt(
+        long = "min-release-version",
+        help = "Minimum node version not to be emergency unstaked"
+    )]
+    pub min_release_version: Option<semver::Version>,
 }
 
 #[allow(dead_code)]
@@ -176,7 +182,12 @@ impl ValidatorScore {
     /// when commission<HEALTHY_VALIDATOR_MAX_COMMISSION (30%)
     /// AND when average_position > 40 (50=average, 40=> at most 10% below average credits_observed)
     /// returns: 0=healthy, 1=warn (score *= 0.5), 2=unstake, 3=unstake & remove from list
-    pub fn is_healthy(&self, avg_this_epoch_credits: u64) -> (u8, String) {
+    pub fn is_healthy(
+        &self,
+        avg_this_epoch_credits: u64,
+        min_release_version: Option<&semver::Version>,
+    ) -> (u8, String) {
+        let version_zero = semver::Version::parse("0.0.0").unwrap();
         //
         // remove from concentrated validators
         if self.under_nakamoto_coefficient {
@@ -194,10 +205,16 @@ impl ValidatorScore {
                     self.commission, HEALTHY_VALIDATOR_MAX_COMMISSION
                 ),
             );
-        // Note: self.delinquent COMMENTED, a good validator could be delinquent for several minutes during an upgrade
-        // it's better to consider this_epoch_credits as filter and not the on/off flag of self.delinquent
-        // } else if self.delinquent {
-        //     return (2, format!("DELINQUENT")); // keep delinquent validators in the list so people can escape by depositing stake accounts from them into Marinade
+            // Note: self.delinquent COMMENTED, a good validator could be delinquent for several minutes during an upgrade
+            // it's better to consider this_epoch_credits as filter and not the on/off flag of self.delinquent
+            // } else if self.delinquent {
+            //     return (2, format!("DELINQUENT")); // keep delinquent validators in the list so people can escape by depositing stake accounts from them into Marinade
+        } else if semver::Version::parse(&self.version)
+            .as_ref()
+            .unwrap_or(&version_zero)
+            < min_release_version.unwrap_or(&version_zero)
+        {
+            return (2, format!("The node version {} is too old.", self.version));
         } else if self.this_epoch_credits < avg_this_epoch_credits * 8 / 10 {
             return (
                 2,
@@ -590,7 +607,8 @@ impl ProcessScoresOptions {
     ) -> () {
         info!("Set score = 0 if validator is not healthy (catch validators unhealthy now in this epoch)");
         for v in validator_scores.iter_mut() {
-            let (remove_level, reason) = v.is_healthy(avg_this_epoch_credits);
+            let (remove_level, reason) =
+                v.is_healthy(avg_this_epoch_credits, self.min_release_version.as_ref());
             v.remove_level = remove_level;
             v.remove_level_reason = reason;
             // if it is not healthy, adjust score to zero

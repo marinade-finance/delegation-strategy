@@ -3654,6 +3654,7 @@ dependencies = [
  "enum_dispatch",
  "log 0.4.14",
  "marinade-finance",
+ "semver 1.0.5",
  "serde",
  "serde_json",
  "solana-clap-utils",
