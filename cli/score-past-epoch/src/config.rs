@@ -41,6 +41,7 @@ fn release_version_of(matches: &ArgMatches<'_>, name: &str) -> Option<semver::Ve
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Cluster {
+    Devnet,
     Testnet,
     MainnetBeta,
 }
@@ -51,6 +52,7 @@ impl std::fmt::Display for Cluster {
             f,
             "{}",
             match self {
+                Self::Devnet => "devnet",
                 Self::Testnet => "testnet",
                 Self::MainnetBeta => "mainnet-beta",
             }
@@ -98,6 +100,9 @@ pub struct Config {
     /// voters
     pub max_poor_voter_percentage: usize,
 
+    /// Maximum stake contcentration for the largest stake account
+    pub max_largest_dc_stake_percent: f64,
+
     /// Vote accounts sharing infrastructure with larger than this amount will not be staked
     /// None: skip infrastructure concentration check
     pub max_infrastructure_concentration: Option<f64>,
@@ -136,6 +141,7 @@ impl Config {
             min_release_version: None,
             max_old_release_version_percentage: 10,
             max_poor_voter_percentage: 20,
+            max_largest_dc_stake_percent: 35,
             max_infrastructure_concentration: Some(100.0),
             bad_cluster_average_skip_rate: 50,
             min_epoch_credit_percentage_of_average: 50,
@@ -187,7 +193,7 @@ pub fn get_config() -> BoxResult<(Config, RpcClient)> {
             Arg::with_name("cluster")
                 .long("cluster")
                 .value_name("NAME")
-                .possible_values(&["mainnet-beta", "testnet"])
+                .possible_values(&["mainnet-beta", "testnet", "devnet"])
                 .takes_value(true)
                 .default_value("testnet")
                 .required(true)
@@ -287,6 +293,15 @@ pub fn get_config() -> BoxResult<(Config, RpcClient)> {
                        all validators are running an older software version")
         )
         .arg(
+            Arg::with_name("max_largest_dc_stake_percent")
+                .long("max-largest-dc-stake-percent")
+                .takes_value(true)
+                .default_value("35")
+                .value_name("PERCENTAGE")
+                .validator(is_valid_percentage)
+                .help("Maximum stake concentration for the largest datacenter")
+        )
+        .arg(
             Arg::with_name("max_infrastructure_concentration")
                 .long("max-infrastructure-concentration")
                 .takes_value(true)
@@ -378,10 +393,10 @@ pub fn get_config() -> BoxResult<(Config, RpcClient)> {
             )
         )
         .get_matches();
-
     let cluster = match value_t_or_exit!(matches, "cluster", String).as_str() {
         "mainnet-beta" => Cluster::MainnetBeta,
         "testnet" => Cluster::Testnet,
+        "devnet" => Cluster::Devnet,
         _ => unreachable!(),
     };
     let quality_block_producer_percentage =
@@ -405,11 +420,15 @@ pub fn get_config() -> BoxResult<(Config, RpcClient)> {
             .unwrap_or_else(|_| "http://api.mainnet-beta.solana.com".into()),
         Cluster::Testnet => value_t!(matches, "json_rpc_url", String)
             .unwrap_or_else(|_| "http://api.testnet.solana.com".into()),
+        Cluster::Devnet => value_t!(matches, "json_rpc_url", String)
+            .unwrap_or_else(|_| "http://api.devnet.solana.com".into()),
     };
     let db_path = value_t_or_exit!(matches, "db_path", PathBuf);
 
     let bad_cluster_average_skip_rate =
         value_t!(matches, "bad_cluster_average_skip_rate", usize).unwrap_or(50);
+    let max_largest_dc_stake_percent =
+        value_t_or_exit!(matches, "max_largest_dc_stake_percent", f64);
     let max_infrastructure_concentration =
         value_t!(matches, "max_infrastructure_concentration", f64).ok();
 
@@ -446,6 +465,7 @@ pub fn get_config() -> BoxResult<(Config, RpcClient)> {
         min_release_version,
         max_old_release_version_percentage,
         max_poor_voter_percentage,
+        max_largest_dc_stake_percent,
         max_infrastructure_concentration,
         bad_cluster_average_skip_rate,
         min_epoch_credit_percentage_of_average,

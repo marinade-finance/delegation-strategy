@@ -69,45 +69,31 @@ pub struct ProcessScoresOptions {
     pct_cap: f64,
 
     #[structopt(
-        long = "zero-score-max-stake-pct",
-        help = "Max percentage of total stake delegated to a zero-scored validator",
-        default_value = "0.45" // %
-    )]
-    zero_score_max_stake_pct: f64,
-
-    // if m.stk is less than 20 % of validator's stake - if full unstake is performed
-    #[structopt(
-        long = "max-overstake-pct",
-        help = "Max pct value of marinade_staked / should_have before validator is considered unhealthy",
-        default_value = "250" // %
-    )]
-    max_overstake_pct: f64,
-
-    #[structopt(
-        long = "max-stake-delta-pct",
-        help = "Sets max stake delta for already staked validators to % of total Marinade stake",
-        default_value = "0.1" // %
-    )]
-    stake_delta_pct_cap: f64,
-
-    #[structopt(
-        long = "marinade-stake-share-pct-grace",
-        help = "If marinade's share on validator's stake is more than this value, it is not considered for emergency unstake in case of overstake",
-        default_value = "20" // %
-    )]
-    marinade_stake_share_pct_grace: f64,
-
-    #[structopt(
-        long = "skip-marinade-specific-rules",
-        help = "Skips rules based on Marinade stake"
-    )]
-    skip_marinade_specific_rules: bool,
-
-    #[structopt(
         long = "min-release-version",
         help = "Minimum node version not to be emergency unstaked"
     )]
     pub min_release_version: Option<semver::Version>,
+
+    #[structopt(
+        long = "gague-meister",
+        help = "Gauge meister of the vote gauges.",
+        // default_value = "9A7RaeYeHoFJ7QmTRGMP8a9eCaU6oC7zXPxNGTZ5cYMX"
+    )]
+    gauge_meister: Option<Pubkey>,
+
+    #[structopt(
+        long = "escrow-relocker",
+        help = "Escrow relocker program address.",
+        // default_value = "tovt1VkTE2T4caWoeFP6a2xSFoew5mNpd7FWidyyMuk"
+    )]
+    escrow_relocker_address: Option<Pubkey>,
+
+    #[structopt(
+        long = "vote-gauges-stake-pct",
+        help = "How much of total stake is affected by votes.",
+        default_value = "10.0" // %
+    )]
+    pub vote_gauges_stake_pct: f64,
 }
 
 #[allow(dead_code)]
@@ -144,6 +130,10 @@ struct ValidatorScore {
     epoch: u64,
     rank: u32,
     score: u32,
+    marinade_score: u32,
+    vote_score: u32,
+    votes_read: u64,
+    votes_effective: u64,
     name: String,
     credits_observed: u64,
     vote_address: String,
@@ -209,6 +199,8 @@ impl ValidatorScore {
             // it's better to consider this_epoch_credits as filter and not the on/off flag of self.delinquent
             // } else if self.delinquent {
             //     return (2, format!("DELINQUENT")); // keep delinquent validators in the list so people can escape by depositing stake accounts from them into Marinade
+        } else if self.credits_observed == 0 {
+            return (2, format!("Zero credits observed.")); // keep them in the list so people can escape by depositing stake accounts from them into Marinade
         } else if semver::Version::parse(&self.version)
             .as_ref()
             .unwrap_or(&version_zero)
@@ -239,8 +231,6 @@ impl ValidatorScore {
                     }
                 ),
             ); // keep delinquent validators in the list so people can escape by depositing stake accounts from them into Marinade
-        } else if self.credits_observed == 0 {
-            return (2, format!("Zero credits observed.")); // keep them in the list so people can escape by depositing stake accounts from them into Marinade
         } else if self.average_position < MIN_AVERAGE_POSITION {
             (
                 1,
@@ -266,14 +256,17 @@ impl ProcessScoresOptions {
         // Read file csv with averages into validator_scores:Vec
         let mut validator_scores: Vec<ValidatorScore> = self.load_avg_file(&epoch_info)?;
 
-        // Sort validator_scores by score desc
-        validator_scores.sort_by(|a, b| b.score.cmp(&a.score));
+        // Sort validator_scores by marinade_score desc
+        validator_scores.sort_by(|a, b| b.marinade_score.cmp(&a.marinade_score));
 
-        let total_score: u64 = validator_scores.iter().map(|s| s.score as u64).sum();
+        let total_marinade_score: u64 = validator_scores
+            .iter()
+            .map(|s| s.marinade_score as u64)
+            .sum();
         info!(
             "avg file contains {} records, total_score {}",
             validator_scores.len(),
-            total_score
+            total_marinade_score
         );
 
         // Get APY Data from stakeview.app
@@ -288,43 +281,75 @@ impl ProcessScoresOptions {
         // Some validators do not play fair, let's set their scores to 0
         self.apply_blacklist(&mut validator_scores);
 
-        if !self.skip_marinade_specific_rules {
-            // imagine a +100K stake delta
-            let total_stake_target = marinade
-                .state
-                .validator_system
-                .total_active_balance
-                .saturating_add(sol_to_lamports(100000.0));
+        // imagine a +100K stake delta
+        let total_stake_target = marinade
+            .state
+            .validator_system
+            .total_active_balance
+            .saturating_add(sol_to_lamports(100000.0));
 
-            // Compute marinade staked & should_have from the current on-chain validator data
-            self.update_with_current_marinade_validators(
-                &marinade,
-                &mut validator_scores,
-                total_stake_target,
-            )?;
+        // Compute marinade staked & should_have from the current on-chain validator data
+        self.load_marinade_staked(&marinade, &mut validator_scores, total_stake_target)?;
 
-            self.adjust_scores_for_overstaked(&mut validator_scores, total_stake_target);
+        self.adjust_marinade_score_for_overstaked(&mut validator_scores);
 
-            self.recompute_pct_with_capping(&mut validator_scores, total_stake_target)?;
+        self.load_votes(&marinade, &mut validator_scores)?;
 
-            self.cap_stake_delta(&mut validator_scores, total_stake_target)?;
+        self.calc_effective_votes(&mut validator_scores);
 
-            self.check_final_scores(&validator_scores);
-        }
+        self.distribute_vote_score(&mut validator_scores);
+
+        self.sum_scores(&mut validator_scores);
+
+        self.recompute_score_with_capping(&mut validator_scores, total_stake_target)?;
+
+        self.check_final_scores(&validator_scores);
 
         // Sort validator_scores by score desc
         validator_scores.sort_by(|a, b| b.score.cmp(&a.score));
 
-        if self.skip_marinade_specific_rules {
-            let mut rank = 1;
-            validator_scores.iter_mut().for_each(|s| {
-                s.rank = rank;
-                rank += 1;
-            });
-        }
-
         self.write_results_to_file(validator_scores)?;
         Ok(())
+    }
+
+    fn sum_scores(&self, validator_scores: &mut Vec<ValidatorScore>) -> () {
+        for v in validator_scores.iter_mut() {
+            v.score = v.marinade_score + v.vote_score;
+        }
+
+        ()
+    }
+
+    fn distribute_vote_score(&self, validator_scores: &mut Vec<ValidatorScore>) -> () {
+        assert!(self.vote_gauges_stake_pct >= 0.0);
+        assert!(self.vote_gauges_stake_pct <= 100.0);
+
+        let votes_sum: u64 = validator_scores.iter().map(|v| v.votes_effective).sum();
+        let marinade_score_sum: u64 = validator_scores
+            .iter()
+            .map(|v| v.marinade_score as u64)
+            .sum();
+
+        if self.vote_gauges_stake_pct == 0.0 {
+            return ();
+        }
+
+        if votes_sum == 0 {
+            return ();
+        }
+
+        let vote_score_target_sum = (marinade_score_sum as f64 * self.vote_gauges_stake_pct
+            / (100.0 - self.vote_gauges_stake_pct)) as u64;
+
+        for v in validator_scores.iter_mut() {
+            v.vote_score = (v.votes_effective * vote_score_target_sum / votes_sum) as u32;
+        }
+    }
+
+    fn calc_effective_votes(&self, validator_scores: &mut Vec<ValidatorScore>) -> () {
+        for v in validator_scores.iter_mut() {
+            v.votes_effective = if v.remove_level > 1 { 0 } else { v.votes_read };
+        }
     }
 
     fn check_final_scores(&self, validator_scores: &Vec<ValidatorScore>) -> () {
@@ -344,56 +369,32 @@ impl ProcessScoresOptions {
         );
     }
 
-    fn cap_stake_delta(
+    fn load_votes(
         &self,
+        rpc_marinade: &RpcMarinade,
         validator_scores: &mut Vec<ValidatorScore>,
-        total_stake_target: u64,
     ) -> anyhow::Result<()> {
-        let total_score = validator_scores.iter().map(|s| s.score as u64).sum();
-        let stake_delta_cap =
-            self.stake_delta_pct_cap / 100.0 * lamports_to_sol(total_stake_target);
-        info!(
-            "Stake delta cap is: {} ({} % m.stk)",
-            stake_delta_cap, self.stake_delta_pct_cap
-        );
-        for v in validator_scores.iter_mut() {
-            // only care about understaked
-            if v.marinade_staked > v.should_have {
-                continue;
-            }
-
-            let stake_delta = if v.marinade_staked < v.should_have {
-                v.should_have - v.marinade_staked
-            } else {
-                continue;
+        let (escrow_relocker_address, gauge_meister) =
+            match (self.escrow_relocker_address, self.gauge_meister) {
+                (Some(e), Some(g)) => (e, g),
+                _ => {
+                    info!("Arguments necessary for fetching votes are missing");
+                    return Ok(());
+                }
             };
 
-            // if there is a huge relative understake
-            if stake_delta > 2.0 * v.marinade_staked {
-                // set score to 80 % of wanted score to make the stake grow a bit conservatively
-                v.score = (v.score as f64 * 0.8) as u32;
-                v.should_have = lamports_to_sol(proportional(
-                    v.score as u64,
-                    total_stake_target,
-                    total_score,
-                )?);
-                continue;
-            }
+        let votes_from_gauges = rpc_marinade.fetch_votes(escrow_relocker_address, gauge_meister)?;
 
-            if stake_delta < stake_delta_cap {
-                continue;
-            }
+        let mut votes = 100_000_000;
 
-            // cap the score growth
-            v.score =
-                (v.score as f64 * (v.marinade_staked + stake_delta_cap) / v.should_have) as u32;
-            v.should_have = lamports_to_sol(proportional(
-                v.score as u64,
-                total_stake_target,
-                total_score,
-            )?);
-            // compute pct with 6 decimals precision
-            v.pct = (v.score as u64 * 100_000_000 / total_score) as f64 / 1_000_000.0;
+        for validator_score in validator_scores.iter_mut() {
+            if let Some(validator_votes) = votes_from_gauges.get(&validator_score.vote_address) {
+                validator_score.votes_read = *validator_votes;
+            }
+            validator_score.votes_read = votes;
+            if votes > 0 {
+                votes -= 20_000_000;
+            }
         }
 
         Ok(())
@@ -412,7 +413,11 @@ impl ProcessScoresOptions {
             validator_scores.push(ValidatorScore {
                 epoch: epoch_info.epoch,
                 rank: record.rank,
-                score: record.score,
+                marinade_score: record.score,
+                vote_score: 0,
+                votes_read: 0,
+                votes_effective: 0,
+                score: 0,
                 name: record.name,
                 credits_observed: record.epoch_credits,
                 vote_address: record.vote_address,
@@ -448,7 +453,7 @@ impl ProcessScoresOptions {
         );
 
         assert!(
-            validator_scores.len() > 1000,
+            validator_scores.len() > 100,
             "Too little validators found in the CSV with average scores"
         );
 
@@ -556,7 +561,7 @@ impl ProcessScoresOptions {
         match validators {
             serde_json::Value::Array(list) => {
                 assert!(
-                    list.len() > 1000,
+                    list.len() > 100,
                     "Too little validators found in the result of `solana validators` command"
                 );
                 for json_info in list {
@@ -616,10 +621,10 @@ impl ProcessScoresOptions {
             // so this will stop the bot staking on a validator that was very good last epochs
             // but delinquent on current epoch
             if remove_level == 1 {
-                v.score /= 2
+                v.marinade_score /= 2;
             } else if remove_level > 1 {
-                v.score = 0
-            };
+                v.marinade_score = 0;
+            }
         }
     }
 
@@ -657,6 +662,16 @@ impl ProcessScoresOptions {
             // Parrot
             // Down for ~2 weeks
             "GBU4potq4TjsmXCUSJXbXwnkYZP8725ZEaeDrLrdQhbA".into(),
+            // The following validators were offline for at least 36 hours when solana was halted in May '22
+            // Just a warning for now.
+            // 2cFGQhgkuibqREEXvz7wEb5CwUqGHfBSTB2oa1hmhkcw
+            // 2mQNruSKNnn6fWqJjKNGsQtpsMnuxxMzHsrKT6iVR7tW
+            // 2vxNDV7aAbrb4Whnxs9LiuxCsm9oubX3c1hozXPsoD97
+            // 5wNag8umJhaaj9gGdqmBz7Xwwy1NL5yQ1QbvPdQrDd3h
+            // 7oX5QSP9yBjT1F1sRSDCX91ZxibETqemDM4WLDju5rTM
+            // 9c5bpzVRbfsYY2fannb4hyX5CJUPg3BfH2cL6sR7kJM4
+            // Cva4NEnBRYfFv8i3RtcMTbEYgyVNmewk2aAgh4fco2mP
+            // EBam6FrvTP4xPSNVNFbwNioGeszDRvYDaqRmxbKJkybD
         ];
 
         for v in validator_scores.iter_mut() {
@@ -664,12 +679,12 @@ impl ProcessScoresOptions {
                 info!("Blacklisted validator found: {}", v.vote_address);
                 v.remove_level = 2;
                 v.remove_level_reason = format!("The validator is blacklisted for bad behavior.");
-                v.score = 0;
+                v.marinade_score = 0;
             }
         }
     }
 
-    fn update_with_current_marinade_validators(
+    fn load_marinade_staked(
         &self,
         marinade: &RpcMarinade,
         validator_scores: &mut Vec<ValidatorScore>,
@@ -677,12 +692,15 @@ impl ProcessScoresOptions {
     ) -> anyhow::Result<()> {
         let (stakes, _max_stakes) = marinade.stakes_info()?;
         let (current_validators, max_validators) = marinade.validator_list()?;
-        let total_score: u64 = validator_scores.iter().map(|s| s.score as u64).sum();
+        let total_marinade_score: u64 = validator_scores
+            .iter()
+            .map(|s| s.marinade_score as u64)
+            .sum();
         info!(
-            "Marinade on chain register: {} Validators of {} max capacity, total_score {}",
+            "Marinade on chain register: {} Validators of {} max capacity, total_marinade_score {}",
             current_validators.len(),
             max_validators,
-            total_score
+            total_marinade_score
         );
 
         let validator_indices = self.index_validator_records(&current_validators);
@@ -710,7 +728,8 @@ impl ProcessScoresOptions {
                 // update on site, adjusted_score & sum_stake
                 v.marinade_staked = lamports_to_sol(sum_stake);
                 v.should_have = lamports_to_sol(
-                    (v.score as f64 * total_stake_target as f64 / total_score as f64) as u64,
+                    (v.marinade_score as f64 * total_stake_target as f64
+                        / total_marinade_score as f64) as u64,
                 );
             }
         }
@@ -718,49 +737,24 @@ impl ProcessScoresOptions {
         Ok(())
     }
 
-    fn adjust_scores_for_overstaked(
+    fn adjust_marinade_score_for_overstaked(
         &self,
         validator_scores: &mut Vec<ValidatorScore>,
-        total_stake_target: u64,
     ) -> () {
-        let total_stake_target = lamports_to_sol(total_stake_target);
-        let min_amount_to_care_about_overstake = 20000f64;
         // adjust score
         // we use v.should_have as score
         for v in validator_scores.iter_mut() {
-            let mariande_stake_share_pct = 100.0 * v.marinade_staked / v.avg_active_stake;
             // if we need to unstake, set a score that's x% of what's staked
             // so we ameliorate how aggressive the stake bot is for the 0-marinade-staked
             // unless this validator is marked for unstake
-            v.score = if v.should_have < v.marinade_staked {
+            v.marinade_score = if v.should_have < v.marinade_staked {
                 // unstake
                 if v.remove_level > 1 {
                     0
-                } else if v.score == 0
-                    && v.marinade_staked / total_stake_target
-                        > self.zero_score_max_stake_pct / 100.0
-                    && mariande_stake_share_pct < self.marinade_stake_share_pct_grace
-                {
-                    v.remove_level = 2;
-                    v.remove_level_reason = format!("Outstanding overstake with zero score (marinade stake is {} % of validator's stake)", mariande_stake_share_pct);
-                    0
-                } else if v.should_have > 0.0
-                    && v.marinade_staked > min_amount_to_care_about_overstake
-                    && v.marinade_staked / v.should_have > self.max_overstake_pct / 100.0
-                    && mariande_stake_share_pct < self.marinade_stake_share_pct_grace
-                {
-                    info!("{} {}", v.marinade_staked, v.should_have);
-                    v.remove_level = 2;
-                    v.remove_level_reason = format!(
-                        "Staked more than {} % of the should_have (marinade stake is {} % of validator's stake)",
-                        v.marinade_staked / v.should_have * 100.0,
-                        mariande_stake_share_pct
-                    );
-                    0
                 } else if v.remove_level == 1 {
-                    (v.marinade_staked * 0.5) as u32
+                    (v.should_have * 0.5) as u32
                 } else {
-                    (v.marinade_staked * 0.90) as u32
+                    (v.should_have) as u32
                 }
             } else {
                 (v.should_have) as u32 // stake
@@ -768,12 +762,17 @@ impl ProcessScoresOptions {
         }
     }
 
-    fn recompute_pct_with_capping(
+    fn recompute_score_with_capping(
         &self,
         validator_scores: &mut Vec<ValidatorScore>,
         total_stake_target: u64,
     ) -> anyhow::Result<()> {
         let total_score = validator_scores.iter().map(|s| s.score as u64).sum();
+
+        if total_score == 0 {
+            return Ok(());
+        }
+
         let mut total_score_of_worse_or_same = total_score;
         let mut score_overflow_rem = 0u64;
         let mut total_score_redistributed = 0u64;
@@ -789,7 +788,7 @@ impl ProcessScoresOptions {
         let mut rank: u32 = 1;
         for v in validator_scores.iter_mut() {
             let score_original: u64 = v.score.into();
-            let fraction_of_worse_of_same = if total_score_of_worse_or_same == 0 {
+            let fraction_of_worse_or_same = if total_score_of_worse_or_same == 0 {
                 0f64
             } else {
                 score_original as f64 / total_score_of_worse_or_same as f64
@@ -803,7 +802,7 @@ impl ProcessScoresOptions {
             };
             total_score_redistributed += score_overflow;
             score_overflow_rem += score_overflow;
-            let score_to_receive = (fraction_of_worse_of_same * (score_overflow_rem as f64)) as u64;
+            let score_to_receive = (fraction_of_worse_or_same * (score_overflow_rem as f64)) as u64;
             let score_new = (score_original + score_to_receive).min(score_cap);
             score_overflow_rem -= if score_new > score_original {
                 score_new - score_original

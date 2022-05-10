@@ -9,7 +9,7 @@ CSV_PATH="$SCRIPT_DIR/../db/score-all-testnet/testnet-validator-detail.csv"
 "$SCRIPT_DIR/clean"
 
 # Score past epoch, the results are available in db/score-all-mainnet-beta directory
-"$BIN_DIR/score-past-epoch" --cluster testnet --min-release-version 1.8.12 $* \
+"$BIN_DIR/score-past-epoch" --cluster testnet --min-release-version 1.9.15 $* \
    score-all \
    --score-max-commission 10 \
    --score-min-stake 100 \

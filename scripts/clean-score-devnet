@@ -1,0 +1,25 @@
+#!/bin/bash
+set -ex
+
+SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
+BIN_DIR="$SCRIPT_DIR/../target/debug"
+CSV_PATH="$SCRIPT_DIR/../db/score-all-devnet/devnet-validator-detail.csv"
+
+# Clean files created by score-past-epoch program
+"$SCRIPT_DIR/clean"
+
+# Score past epoch, the results are available in db/score-all-mainnet-beta directory
+"$BIN_DIR/score-past-epoch" \
+  --cluster devnet \
+  --max-largest-dc-stake-percent 100 \
+  --max-poor-voter-percentage 100 \
+  --max-poor-block-producer-percentage 100 \
+  $* \
+  score-all \
+  --score-max-commission 100 \
+  --score-min-stake 100 \
+  --concentration-point-discount 1500 \
+  --min-avg-position 50
+
+# Import CSV with the past scores into sqlite DB
+"$SCRIPT_DIR/import-scores-into-db" "$CSV_PATH"

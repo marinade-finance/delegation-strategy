@@ -6,3 +6,4 @@ DB_DIR="$SCRIPT_DIR/../db"
 
 rm -rf "$DB_DIR/score-all-mainnet-beta"
 rm -rf "$DB_DIR/score-all-testnet"
+rm -rf "$DB_DIR/score-all-devnet"

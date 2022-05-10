@@ -12,6 +12,7 @@ use {
 pub enum ClusterJson {
     MainnetBeta,
     Testnet,
+    Devnet,
 }
 
 impl Default for ClusterJson {
@@ -25,6 +26,7 @@ impl AsRef<str> for ClusterJson {
         match self {
             Self::MainnetBeta => "mainnet.json",
             Self::Testnet => "testnet.json",
+            Self::Devnet => "devnet.json",
         }
     }
 }

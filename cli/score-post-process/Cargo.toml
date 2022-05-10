@@ -23,6 +23,7 @@ solana-clap-utils = "1.7.11"
 solana-client = "1.7.11"
 solana-logger = "1.7.11"
 solana-sdk = "1.7.11"
+solana-account-decoder = "1.7.11"
 marinade-finance = { git = "https://github.com/marinade-finance/liquid-staking-program" }
 cli-common = { path = "../cli-common" }
 semver = "1.0.3"
