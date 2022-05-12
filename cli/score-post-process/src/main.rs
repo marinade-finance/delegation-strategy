@@ -12,7 +12,6 @@ use std::{str::FromStr, sync::Arc};
 use structopt::StructOpt;
 
 pub mod process_scores;
-pub mod utils;
 
 use process_scores::ProcessScoresOptions;
 

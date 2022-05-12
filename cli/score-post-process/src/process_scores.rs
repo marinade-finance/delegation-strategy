@@ -94,6 +94,13 @@ pub struct ProcessScoresOptions {
         default_value = "10.0" // %
     )]
     pub vote_gauges_stake_pct: f64,
+
+    #[structopt(
+        long = "stake-top-n-validators",
+        help = "How many validators are guaranteed to keep their scores.",
+        default_value = "400"
+    )]
+    stake_top_n_validators: usize,
 }
 
 #[allow(dead_code)]
@@ -259,16 +266,6 @@ impl ProcessScoresOptions {
         // Sort validator_scores by marinade_score desc
         validator_scores.sort_by(|a, b| b.marinade_score.cmp(&a.marinade_score));
 
-        let total_marinade_score: u64 = validator_scores
-            .iter()
-            .map(|s| s.marinade_score as u64)
-            .sum();
-        info!(
-            "avg file contains {} records, total_score {}",
-            validator_scores.len(),
-            total_marinade_score
-        );
-
         // Get APY Data from stakeview.app
         self.load_apy_file(&mut validator_scores)?;
 
@@ -288,21 +285,33 @@ impl ProcessScoresOptions {
             .total_active_balance
             .saturating_add(sol_to_lamports(100000.0));
 
-        // Compute marinade staked & should_have from the current on-chain validator data
-        self.load_marinade_staked(&marinade, &mut validator_scores, total_stake_target)?;
+        // Compute marinade_staked from the current on-chain validator data
+        self.load_marinade_staked(&marinade, &mut validator_scores)?;
+
+        // Set scores of validators out of top N to zero unless we have a stake with them
+        // This makes sure that we do not constantly stake/unstake people near the end of the list.
+        self.adjust_scores_of_validators_below_line(&mut validator_scores);
+
+        self.update_should_have(&mut validator_scores, total_stake_target);
 
         self.adjust_marinade_score_for_overstaked(&mut validator_scores);
 
+        // Loads votes from gauges
         self.load_votes(&marinade, &mut validator_scores)?;
 
+        // Zero votes for misbehaving validators
         self.calc_effective_votes(&mut validator_scores);
 
+        // Figure out how much score is represented by votes so voted score is a specific percentage of total
         self.distribute_vote_score(&mut validator_scores);
 
-        self.sum_scores(&mut validator_scores);
+        // Update the compound score
+        self.sum_marinade_and_vote_scores(&mut validator_scores);
 
+        // Apply cap
         self.recompute_score_with_capping(&mut validator_scores, total_stake_target)?;
 
+        // Final assertions
         self.check_final_scores(&validator_scores);
 
         // Sort validator_scores by score desc
@@ -312,19 +321,28 @@ impl ProcessScoresOptions {
         Ok(())
     }
 
-    fn sum_scores(&self, validator_scores: &mut Vec<ValidatorScore>) -> () {
+    fn adjust_scores_of_validators_below_line(
+        &self,
+        validator_scores: &mut Vec<ValidatorScore>,
+    ) -> () {
+        for (index, validator) in validator_scores.iter_mut().enumerate() {
+            if index >= self.stake_top_n_validators && validator.marinade_staked == 0.0 {
+                validator.marinade_score = 0;
+            }
+        }
+    }
+
+    fn sum_marinade_and_vote_scores(&self, validator_scores: &mut Vec<ValidatorScore>) -> () {
         for v in validator_scores.iter_mut() {
             v.score = v.marinade_score + v.vote_score;
         }
-
-        ()
     }
 
     fn distribute_vote_score(&self, validator_scores: &mut Vec<ValidatorScore>) -> () {
         assert!(self.vote_gauges_stake_pct >= 0.0);
         assert!(self.vote_gauges_stake_pct <= 100.0);
 
-        let votes_sum: u64 = validator_scores.iter().map(|v| v.votes_effective).sum();
+        let effective_votes_sum: u64 = validator_scores.iter().map(|v| v.votes_effective).sum();
         let marinade_score_sum: u64 = validator_scores
             .iter()
             .map(|v| v.marinade_score as u64)
@@ -334,7 +352,7 @@ impl ProcessScoresOptions {
             return ();
         }
 
-        if votes_sum == 0 {
+        if effective_votes_sum == 0 {
             return ();
         }
 
@@ -342,7 +360,7 @@ impl ProcessScoresOptions {
             / (100.0 - self.vote_gauges_stake_pct)) as u64;
 
         for v in validator_scores.iter_mut() {
-            v.vote_score = (v.votes_effective * vote_score_target_sum / votes_sum) as u32;
+            v.vote_score = (v.votes_effective * vote_score_target_sum / effective_votes_sum) as u32;
         }
     }
 
@@ -455,6 +473,16 @@ impl ProcessScoresOptions {
         assert!(
             validator_scores.len() > 100,
             "Too little validators found in the CSV with average scores"
+        );
+
+        let total_marinade_score: u64 = validator_scores
+            .iter()
+            .map(|s| s.marinade_score as u64)
+            .sum();
+        info!(
+            "avg file contains {} records, total_score {}",
+            validator_scores.len(),
+            total_marinade_score
         );
 
         Ok(validator_scores)
@@ -688,7 +716,6 @@ impl ProcessScoresOptions {
         &self,
         marinade: &RpcMarinade,
         validator_scores: &mut Vec<ValidatorScore>,
-        total_stake_target: u64,
     ) -> anyhow::Result<()> {
         let (stakes, _max_stakes) = marinade.stakes_info()?;
         let (current_validators, max_validators) = marinade.validator_list()?;
@@ -727,14 +754,28 @@ impl ProcessScoresOptions {
 
                 // update on site, adjusted_score & sum_stake
                 v.marinade_staked = lamports_to_sol(sum_stake);
-                v.should_have = lamports_to_sol(
-                    (v.marinade_score as f64 * total_stake_target as f64
-                        / total_marinade_score as f64) as u64,
-                );
             }
         }
 
         Ok(())
+    }
+
+    fn update_should_have(
+        &self,
+        validator_scores: &mut Vec<ValidatorScore>,
+        total_stake_target: u64,
+    ) -> () {
+        let total_marinade_score: u64 = validator_scores
+            .iter()
+            .map(|s| s.marinade_score as u64)
+            .sum();
+
+        for v in validator_scores.iter_mut() {
+            v.should_have = lamports_to_sol(
+                (v.marinade_score as f64 * total_stake_target as f64 / total_marinade_score as f64)
+                    as u64,
+            );
+        }
     }
 
     fn adjust_marinade_score_for_overstaked(
