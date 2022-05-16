@@ -9,20 +9,14 @@ DATA_DIR="$SCRIPT_DIR/../db"
 "$SCRIPT_DIR/create-avg-file"
 
 # Get solana validators info as json file for current epoch_credits
-solana validators -um --output json > "$DATA_DIR/solana-validators.json"
-
-# Get stakeview.app info for current APY
-EPOCH=$(solana -um epoch-info|sed -n 's/Epoch: //p')
-curl "https://stakeview.app/apy/$EPOCH.json" > "$DATA_DIR/current-epoch-apy.json"
+solana validators -ud --output json > "$DATA_DIR/solana-validators.json"
 
 # post-process avg.csv generating post-process.csv
 date
 "$BIN_DIR/score-post-process" process-scores $@ \
-  --apy-file "$DATA_DIR/current-epoch-apy.json" \
   --avg-file "$DATA_DIR/avg.csv" \
   --validators-file "$DATA_DIR/solana-validators.json" \
   --result-file "$DATA_DIR/post-processed-scores.csv" \
-  --min-release-version 1.9.15
 
 # Import scores to db
 "$SCRIPT_DIR/import-post-processed-scores"

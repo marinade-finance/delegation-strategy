@@ -33,6 +33,10 @@ fn main() -> BoxResult<()> {
             validators_list::testnet_validators().into_iter().collect(),
             testnet_identity_to_participant,
         ),
+        Cluster::Devnet => (
+            validators_list::testnet_validators().into_iter().collect(),
+            testnet_identity_to_participant,
+        ),
     };
 
     let epoch = rpc_client.get_epoch_info()?.epoch;

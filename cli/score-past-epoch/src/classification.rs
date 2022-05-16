@@ -495,7 +495,7 @@ pub fn classify(
                 "Largest data center stake concentration: ~{}%",
                 max_infrastucture_stake_percent
             );
-            if max_infrastucture_stake_percent > 35 {
+            if max_infrastucture_stake_percent as f64 > config.max_largest_dc_stake_percent {
                 return Err("Largest data center stake concentration is too high".into());
             }
             data_centers

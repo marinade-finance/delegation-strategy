@@ -82,8 +82,21 @@ pub fn get(cluster: &str) -> Result<DataCenters, Box<dyn error::Error>> {
     let cluster_json = match cluster {
         "mainnet-beta" => validators_app::ClusterJson::MainnetBeta,
         "testnet" => validators_app::ClusterJson::Testnet,
+        "devnet" => validators_app::ClusterJson::Devnet,
         _ => return Err(format!("Unsupported cluster: {}", cluster).into()),
     };
+
+    if cluster == "devnet" {
+        return Ok(DataCenters {
+            info: vec![DataCenterInfo {
+                id: DataCenterId {
+                    ..Default::default()
+                },
+                ..Default::default()
+            }],
+            ..Default::default()
+        });
+    }
 
     let token = std::env::var("VALIDATORS_APP_TOKEN")
         .map_err(|err| format!("VALIDATORS_APP_TOKEN: {}", err))?;
