@@ -403,15 +403,9 @@ impl ProcessScoresOptions {
 
         let votes_from_gauges = rpc_marinade.fetch_votes(escrow_relocker_address, gauge_meister)?;
 
-        let mut votes = 100_000_000;
-
         for validator_score in validator_scores.iter_mut() {
             if let Some(validator_votes) = votes_from_gauges.get(&validator_score.vote_address) {
                 validator_score.votes_read = *validator_votes;
-            }
-            validator_score.votes_read = votes;
-            if votes > 0 {
-                votes -= 20_000_000;
             }
         }
 
