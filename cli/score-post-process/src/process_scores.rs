@@ -91,14 +91,14 @@ pub struct ProcessScoresOptions {
     #[structopt(
         long = "vote-gauges-stake-pct",
         help = "How much of total stake is affected by votes.",
-        default_value = "10.0" // %
+        default_value = "10" // %
     )]
-    pub vote_gauges_stake_pct: f64,
+    pub vote_gauges_stake_pct: u32,
 
     #[structopt(
         long = "stake-top-n-validators",
         help = "How many validators are guaranteed to keep their scores.",
-        default_value = "400"
+        default_value = "430"
     )]
     stake_top_n_validators: usize,
 }
@@ -302,11 +302,8 @@ impl ProcessScoresOptions {
         // Zero votes for misbehaving validators
         self.calc_effective_votes(&mut validator_scores);
 
-        // Figure out how much score is represented by votes so voted score is a specific percentage of total
+        // We remove x % from everybody, we distribute x % based on scores, we sum marinade_score and vote_score
         self.distribute_vote_score(&mut validator_scores);
-
-        // Update the compound score
-        self.sum_marinade_and_vote_scores(&mut validator_scores);
 
         // Apply cap
         self.recompute_score_with_capping(&mut validator_scores, total_stake_target)?;
@@ -321,6 +318,8 @@ impl ProcessScoresOptions {
         Ok(())
     }
 
+    // Set scores of validators out of top N to zero unless we have a stake with them
+    // This makes sure that we do not constantly stake/unstake people near the end of the list.
     fn adjust_scores_of_validators_below_line(
         &self,
         validator_scores: &mut Vec<ValidatorScore>,
@@ -332,35 +331,31 @@ impl ProcessScoresOptions {
         }
     }
 
-    fn sum_marinade_and_vote_scores(&self, validator_scores: &mut Vec<ValidatorScore>) -> () {
-        for v in validator_scores.iter_mut() {
-            v.score = v.marinade_score + v.vote_score;
-        }
-    }
-
     fn distribute_vote_score(&self, validator_scores: &mut Vec<ValidatorScore>) -> () {
-        assert!(self.vote_gauges_stake_pct >= 0.0);
-        assert!(self.vote_gauges_stake_pct <= 100.0);
-
-        let effective_votes_sum: u64 = validator_scores.iter().map(|v| v.votes_effective).sum();
-        let marinade_score_sum: u64 = validator_scores
-            .iter()
-            .map(|v| v.marinade_score as u64)
-            .sum();
-
-        if self.vote_gauges_stake_pct == 0.0 {
+        if self.vote_gauges_stake_pct == 0 {
             return ();
         }
+
+        assert!(self.vote_gauges_stake_pct <= 100);
+
+        let effective_votes_sum: u64 = validator_scores.iter().map(|v| v.votes_effective).sum();
 
         if effective_votes_sum == 0 {
             return ();
         }
 
-        let vote_score_target_sum = (marinade_score_sum as f64 * self.vote_gauges_stake_pct
-            / (100.0 - self.vote_gauges_stake_pct)) as u64;
+        let marinade_score_sum: u64 = validator_scores
+            .iter()
+            .map(|v| v.marinade_score as u64)
+            .sum();
 
+        let vote_score_target_sum = marinade_score_sum * self.vote_gauges_stake_pct as u64 / 100;
+
+        // We remove x % from everybody, we distribute x % based on scores, we sum marinade_score and vote_score
         for v in validator_scores.iter_mut() {
+            v.marinade_score = v.marinade_score * (100 - self.vote_gauges_stake_pct) / 100;
             v.vote_score = (v.votes_effective * vote_score_target_sum / effective_votes_sum) as u32;
+            v.score = v.marinade_score + v.vote_score;
         }
     }
 

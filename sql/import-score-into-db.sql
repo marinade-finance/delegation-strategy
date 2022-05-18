@@ -106,7 +106,7 @@ DROP TABLE IF EXISTS avg;
 create table AVG as
 select 0 as rank, epoch,keybase_id, vote_address,name,
    case when score=0 or mult<=0 or score_records<5 or COALESCE(avg_active_stake,0)<100 then 0 else ROUND(base_score*mult) end as avg_score,
-   base_score, ap-48 mult, ap as avg_pos, commission, max_commission, round(c2,2) as avg_commiss, dcc2, data_center_asn, data_center_location,
+   base_score, mult, ap as avg_pos, commission, max_commission, round(c2,2) as avg_commiss, dcc2, data_center_asn, data_center_location,
    epoch_credits, cast(ec2 as integer) as avg_ec, epoch_credits-ec2 as delta_credits,
    0.0 as pct, score_records, avg_active_stake,
    can_halt_the_network_group, identity, stake_conc, www_url as url, version
@@ -114,7 +114,7 @@ from imported A
 left outer JOIN (
        select count(*) as score_records,
             round( avg(b.adj_credits) ) as base_score,
-            avg(b.avg_position) as ap, avg(b.avg_position)-48 as mult, avg(b.commission) as c2, ROUND(avg(b.epoch_credits)) as ec2,
+            avg(b.avg_position) as ap, case when avg(b.avg_position) < 50 then 1 else avg(b.avg_position)-49 end as mult, avg(b.commission) as c2, ROUND(avg(b.epoch_credits)) as ec2,
             avg(b.data_center_concentration) as dcc2, b.vote_address as va2, avg(b.active_stake) as avg_active_stake
        from scores B
        where B.epoch between (select distinct epoch from imported)-4 and (select distinct epoch from imported)
