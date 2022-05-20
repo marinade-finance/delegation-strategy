@@ -74,18 +74,10 @@ pub struct ProcessScoresOptions {
     )]
     pub min_release_version: Option<semver::Version>,
 
-    #[structopt(
-        long = "gague-meister",
-        help = "Gauge meister of the vote gauges.",
-        // default_value = "9A7RaeYeHoFJ7QmTRGMP8a9eCaU6oC7zXPxNGTZ5cYMX"
-    )]
+    #[structopt(long = "gauge-meister", help = "Gauge meister of the vote gauges.")]
     gauge_meister: Option<Pubkey>,
 
-    #[structopt(
-        long = "escrow-relocker",
-        help = "Escrow relocker program address.",
-        // default_value = "tovt1VkTE2T4caWoeFP6a2xSFoew5mNpd7FWidyyMuk"
-    )]
+    #[structopt(long = "escrow-relocker", help = "Escrow relocker program address.")]
     escrow_relocker_address: Option<Pubkey>,
 
     #[structopt(
@@ -332,6 +324,10 @@ impl ProcessScoresOptions {
     }
 
     fn distribute_vote_score(&self, validator_scores: &mut Vec<ValidatorScore>) -> () {
+        for v in validator_scores.iter_mut() {
+            v.score = v.marinade_score;
+        }
+
         if self.vote_gauges_stake_pct == 0 {
             return ();
         }
@@ -354,7 +350,8 @@ impl ProcessScoresOptions {
         // We remove x % from everybody, we distribute x % based on scores, we sum marinade_score and vote_score
         for v in validator_scores.iter_mut() {
             v.marinade_score = v.marinade_score * (100 - self.vote_gauges_stake_pct) / 100;
-            v.vote_score = (v.votes_effective * vote_score_target_sum / effective_votes_sum) as u32;
+            v.vote_score = (v.votes_effective as u128 * vote_score_target_sum as u128
+                / effective_votes_sum as u128) as u32;
             v.score = v.marinade_score + v.vote_score;
         }
     }

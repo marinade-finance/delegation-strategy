@@ -204,6 +204,7 @@ impl RpcMarinade {
                 with_context: None,
             },
         )?;
+
         let gauges: Vec<Gauge> = accounts
             .iter()
             .flat_map(|(_, account)| Gauge::try_deserialize_unchecked(&mut &account.data[..]))
