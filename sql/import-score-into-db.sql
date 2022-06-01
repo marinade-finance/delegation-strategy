@@ -117,7 +117,7 @@ left outer JOIN (
             avg(b.avg_position) as ap, case when avg(b.avg_position) < 50 then 1 else avg(b.avg_position)-49 end as mult, avg(b.commission) as c2, ROUND(avg(b.epoch_credits)) as ec2,
             avg(b.data_center_concentration) as dcc2, b.vote_address as va2, avg(b.active_stake) as avg_active_stake
        from scores B
-       where B.epoch between (select distinct epoch from imported)-4 and (select distinct epoch from imported)
+       where B.epoch between (select distinct epoch from imported)-9 and (select distinct epoch from imported)
        group by vote_address
        )
      on va2 = a.vote_address
