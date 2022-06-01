@@ -679,8 +679,9 @@ pub fn classify(
     }
     if too_many_old_validators {
         notes.push(format!(
-            "Over {}% of validators classified as running an older release",
-            config.max_old_release_version_percentage
+            "Over {}% of validators classified as running an older release ({} validators)",
+            config.max_old_release_version_percentage,
+            cluster_nodes_with_old_version.len()
         ));
     }
     if too_many_poor_block_producers {

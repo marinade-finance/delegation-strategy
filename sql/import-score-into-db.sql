@@ -68,7 +68,7 @@ UPDATE imported set
 
 --recompute avg_position based on adj_credits
 update imported
-set avg_position = adj_credits * 50 / (select avg(adj_credits) from scores B where adj_credits>30000);
+set avg_position = adj_credits * 50 / (select avg(adj_credits) from imported B where adj_credits>30000);
 
 --control, show total staked
 select DISTINCT epoch from imported;
