@@ -686,6 +686,16 @@ impl ProcessScoresOptions {
             // 9c5bpzVRbfsYY2fannb4hyX5CJUPg3BfH2cL6sR7kJM4
             // Cva4NEnBRYfFv8i3RtcMTbEYgyVNmewk2aAgh4fco2mP
             // EBam6FrvTP4xPSNVNFbwNioGeszDRvYDaqRmxbKJkybD
+
+            // The following validators were offline for at least 36 hours when solana was halted in June '22
+            // Just a warning for now.
+            // DeGodsKvJrNTkxcnXVzo4FxpVagQ8XsLKibqxNqJPx27
+            // 7K8DVxtNJGnMtUY1CQJT5jcs8sFGSZTDiG7kowvFpECh
+
+            // The following were down for more than 36 hours in halt #2 (May '22) and #3 (June '22)
+            "5wNag8umJhaaj9gGdqmBz7Xwwy1NL5yQ1QbvPdQrDd3h".into(),
+            "7oX5QSP9yBjT1F1sRSDCX91ZxibETqemDM4WLDju5rTM".into(),
+            "Cva4NEnBRYfFv8i3RtcMTbEYgyVNmewk2aAgh4fco2mP".into(),
         ];
 
         for v in validator_scores.iter_mut() {
