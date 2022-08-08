@@ -14,7 +14,8 @@ CSV_PATH="$SCRIPT_DIR/../db/score-all-mainnet-beta/mainnet-beta-validator-detail
 # Score past epoch, the results are available in db/score-all-mainnet-beta directory
 "$BIN_DIR/score-past-epoch" \
   --cluster mainnet-beta \
-  --min-release-version 1.9.28 \
+  --min-release-version 1.10.32 \
+  --max-old-release-version-percentage 30 \
   $* \
   score-all \
   --score-max-commission 10 \
