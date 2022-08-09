@@ -183,14 +183,14 @@ impl ValidatorScore {
             return (
                 2,
                 format!(
-                    "The validator is in the concentrated group (under the Nakamoto coefficient)."
+                    "This validator is currently part of the superminority and cannot receive stake from Marinade."
                 ),
             );
         } else if self.commission > HEALTHY_VALIDATOR_MAX_COMMISSION {
             return (
                 3,
                 format!(
-                    "The commission {}% is above {}%",
+                    "The commission of this validator ({}%) is above {}% and won’t allow it to receive stake from Marinade.",
                     self.commission, HEALTHY_VALIDATOR_MAX_COMMISSION
                 ),
             );
@@ -199,18 +199,19 @@ impl ValidatorScore {
             // } else if self.delinquent {
             //     return (2, format!("DELINQUENT")); // keep delinquent validators in the list so people can escape by depositing stake accounts from them into Marinade
         } else if self.credits_observed == 0 {
-            return (2, format!("Zero credits observed.")); // keep them in the list so people can escape by depositing stake accounts from them into Marinade
+            return (2, format!("This validator isn’t producing credits and will not be able to receive stake from Marinade."));
+        // keep them in the list so people can escape by depositing stake accounts from them into Marinade
         } else if semver::Version::parse(&self.version)
             .as_ref()
             .unwrap_or(&version_zero)
             < min_release_version.unwrap_or(&version_zero)
         {
-            return (2, format!("The node version {} is too old.", self.version));
+            return (2, format!("The node version of this validator is below the required version, it will not be able to receive stake from Marinade."));
         } else if self.this_epoch_credits < avg_this_epoch_credits * 8 / 10 {
             return (
                 2,
                 format!(
-                    "The validator has very low production ({}% of credits average).",
+                    "The credits observed for this validator are too low compared to the average to be able to receive stake from Marinade. ({} % of the average)",
                     if avg_this_epoch_credits == 0 {
                         0
                     } else {
@@ -702,7 +703,7 @@ impl ProcessScoresOptions {
             if blacklisted.contains(&v.vote_address) {
                 info!("Blacklisted validator found: {}", v.vote_address);
                 v.remove_level = 2;
-                v.remove_level_reason = format!("The validator is blacklisted for bad behavior.");
+                v.remove_level_reason = format!("This validator is blacklisted for bad behavior (cheating with credits, end of epoch change of commission). It won’t be able to receive stake from Marinade.");
                 v.marinade_score = 0;
             }
         }
