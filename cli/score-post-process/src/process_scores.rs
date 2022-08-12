@@ -285,6 +285,8 @@ impl ProcessScoresOptions {
         // This makes sure that we do not constantly stake/unstake people near the end of the list.
         self.adjust_scores_of_validators_below_line(&mut validator_scores);
 
+        self.apply_commission_bonus(&mut validator_scores);
+
         self.update_should_have(&mut validator_scores, total_stake_target);
 
         self.adjust_marinade_score_for_overstaked(&mut validator_scores);
@@ -309,6 +311,20 @@ impl ProcessScoresOptions {
 
         self.write_results_to_file(validator_scores)?;
         Ok(())
+    }
+
+    fn apply_commission_bonus(&self, validator_scores: &mut Vec<ValidatorScore>) -> () {
+        for v in validator_scores.iter_mut() {
+            let multiplier = match v.commission {
+                c if c <= 6 => 5,
+                7 => 4,
+                8 => 3,
+                9 => 2,
+                _ => 1,
+            };
+
+            v.marinade_score *= multiplier;
+        }
     }
 
     // Set scores of validators out of top N to zero unless we have a stake with them
