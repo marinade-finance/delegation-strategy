@@ -145,9 +145,9 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new<T: AsRef<str>>(api_token: T, cluster: ClusterJson) -> Self {
+    pub fn new(api_token: String, cluster: ClusterJson) -> Self {
         let config = ClientConfig {
-            api_token: api_token.as_ref().to_string(),
+            api_token,
             cluster,
             ..ClientConfig::default()
         };
@@ -188,7 +188,13 @@ impl Client {
             .build()?;
         let result = self.client.execute(request);
         info!("Response took {:?}", Instant::now().duration_since(start));
-        result
+        match result?.error_for_status() {
+            Ok(ok_result) => Ok(ok_result),
+            Err(failure_result) => {
+                error!("Response is not 200(OK): {:?}", failure_result);
+                Err(failure_result)
+            }
+        }
     }
 
     #[allow(dead_code)]
