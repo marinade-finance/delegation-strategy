@@ -100,6 +100,9 @@ pub fn get(cluster: &str) -> Result<DataCenters, Box<dyn error::Error>> {
 
     let token = std::env::var("VALIDATORS_APP_TOKEN")
         .map_err(|err| format!("VALIDATORS_APP_TOKEN: {}", err))?;
+    if token.trim().is_empty() {
+        Err("Env variable VALIDATORS_APP_TOKEN has got empty value")?;
+    };
     let client = validators_app::Client::new(token, cluster_json);
     let validators = client.validators(None, None)?;
     let mut data_center_map = HashMap::new();
