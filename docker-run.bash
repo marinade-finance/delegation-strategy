@@ -19,4 +19,4 @@ docker run \
   --user "$UID" \
   --rm \
   --volume "$DB_PATH:/usr/local/db" \
-  delegation-strategy ./scripts/score-post-process
+  delegation-strategy ./scripts/score-post-process-mainnet
