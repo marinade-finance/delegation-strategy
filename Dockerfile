@@ -20,15 +20,3 @@ RUN chmod 755 -R /root
 RUN solana config set -u mainnet-beta
 RUN cp -r /root/.config /
 RUN chmod 755 /.config
-
-# FROM alpine:3.14
-#
-# RUN apk update
-# RUN apk upgrade
-# RUN apk add --no-cache bash sqlite curl
-#
-# WORKDIR /usr/local/
-#
-# COPY --from=builder /usr/local/target target/
-#
-# RUN ls -la target/debug
