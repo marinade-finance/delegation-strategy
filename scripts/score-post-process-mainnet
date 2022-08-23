@@ -17,7 +17,8 @@ curl "https://stakeview.app/apy/$EPOCH.json" > "$DATA_DIR/current-epoch-apy.json
 
 # post-process avg.csv generating post-process.csv
 date
-"$BIN_DIR/score-post-process" process-scores $@ \
+"$BIN_DIR/score-post-process" -c /root/.config/solana/cli/config.yml \
+  process-scores $@ \
   --apy-file "$DATA_DIR/current-epoch-apy.json" \
   --avg-file "$DATA_DIR/avg.csv" \
   --validators-file "$DATA_DIR/solana-validators.json" \
