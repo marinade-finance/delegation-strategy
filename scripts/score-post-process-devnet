@@ -13,10 +13,11 @@ solana validators -ud --output json > "$DATA_DIR/solana-validators.json"
 
 # post-process avg.csv generating post-process.csv
 date
-"$BIN_DIR/score-post-process" process-scores $@ \
+"$BIN_DIR/score-post-process" -c /root/.config/solana/cli/config.yml \
+  process-scores $@ \
   --avg-file "$DATA_DIR/avg.csv" \
   --validators-file "$DATA_DIR/solana-validators.json" \
-  --result-file "$DATA_DIR/post-processed-scores.csv" \
+  --result-file "$DATA_DIR/post-processed-scores.csv"
 
 # Import scores to db
 "$SCRIPT_DIR/import-post-processed-scores"
