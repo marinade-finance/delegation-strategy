@@ -13,6 +13,8 @@ RUN solana config set -u mainnet-beta
 RUN cp -r /root/.config /
 RUN chmod 755 /.config
 
+ENV HOME="/root"
+
 ADD Cargo.lock .
 ADD Cargo.toml .
 ADD cli cli/
