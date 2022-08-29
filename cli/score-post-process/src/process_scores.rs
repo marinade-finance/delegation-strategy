@@ -713,6 +713,9 @@ impl ProcessScoresOptions {
             "5wNag8umJhaaj9gGdqmBz7Xwwy1NL5yQ1QbvPdQrDd3h".into(),
             "7oX5QSP9yBjT1F1sRSDCX91ZxibETqemDM4WLDju5rTM".into(),
             "Cva4NEnBRYfFv8i3RtcMTbEYgyVNmewk2aAgh4fco2mP".into(),
+
+            // Exiting mainnet:
+            "2vxNDV7aAbrb4Whnxs9LiuxCsm9oubX3c1hozXPsoD97".into(),
         ];
 
         for v in validator_scores.iter_mut() {
