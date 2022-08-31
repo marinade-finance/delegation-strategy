@@ -716,6 +716,9 @@ impl ProcessScoresOptions {
 
             // Exiting mainnet:
             "2vxNDV7aAbrb4Whnxs9LiuxCsm9oubX3c1hozXPsoD97".into(),
+            
+            // Marinade stake puts them in superminority, unstaking puts them back - this creates loop of stake/unstake
+            "CogentC52e7kktFfWHwsqSmr8LiS1yAtfqhHcftCPcBJ".into(),
         ];
 
         for v in validator_scores.iter_mut() {
