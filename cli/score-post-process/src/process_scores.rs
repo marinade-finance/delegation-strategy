@@ -719,7 +719,7 @@ impl ProcessScoresOptions {
             ("2vxNDV7aAbrb4Whnxs9LiuxCsm9oubX3c1hozXPsoD97".into(), default_blacklist_reason.clone()),
 
             // Marinade stake puts them in superminority, unstaking puts them back - this creates loop of stake/unstake
-            ("CogentC52e7kktFfWHwsqSmr8LiS1yAtfqhHcftCPcBJ".into(), "Marinade stake could possibly move the validator to superminority, forcing us to remove it soon, creating stake-unstake-stake-... cycle.".to_string()),
+            ("CogentC52e7kktFfWHwsqSmr8LiS1yAtfqhHcftCPcBJ".into(), "This validator is close to the superminority threshold and will not receive stake to avoid multiple stake/unstake operations on successive epochs.".to_string()),
         ]);
 
         for v in validator_scores.iter_mut() {
