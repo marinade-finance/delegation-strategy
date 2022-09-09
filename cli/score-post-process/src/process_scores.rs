@@ -660,7 +660,8 @@ impl ProcessScoresOptions {
     }
 
     fn apply_blacklist(&self, validator_scores: &mut Vec<ValidatorScore>) -> () {
-        let blacklisted: Vec<String> = vec![
+        let default_blacklist_reason = format!("This validator is blacklisted for bad behavior (cheating with credits, end of epoch change of commission). It won’t be able to receive stake from Marinade.");
+        let blacklisted: HashMap<String, String> = HashMap::from([
             // manually slashed-paused
             // https://discord.com/channels/823564092379627520/856529851274887168/914462176205500446
             // Marinade is about to stake a validator that is intentionally delaying their votes to always vote in the correct fork. They changed the code so they don't waste any vote with consensus...
@@ -669,7 +670,7 @@ impl ProcessScoresOptions {
             // 1) #14 Validator rep1xGEJzUiQCQgnYjNn76mFRpiPaZaKRwc13wm8mNr, score-pct:0.6037%
             // ValidatorScoreRecord { rank: 14, pct: 0.827161338644014, epoch: 252, keybase_id: "replicantstaking", name: "Replicant Staking", vote_address: "rep1xGEJzUiQCQgnYjNn76mFRpiPaZaKRwc13wm8mNr", score: 3211936, average_position: 57.8258431048359, commission: 0, epoch_credits: 364279, data_center_concentration: 0.03242, base_score: 363924.0, mult: 8.82584310483592, avg_score: 3211936.0, avg_active_stake: 6706.7905232706 }
             // avg-staked 6706.79, marinade-staked 50.13 (0.75%), should_have 39238.66, to balance +stake 39188.54 (accum +stake to this point 39188.54)
-            "rep1xGEJzUiQCQgnYjNn76mFRpiPaZaKRwc13wm8mNr".into(),
+            ("rep1xGEJzUiQCQgnYjNn76mFRpiPaZaKRwc13wm8mNr".into(), default_blacklist_reason.clone()),
             // manually slashed-paused
             // Same entity 4block-team with 2 validators
             // https://discord.com/channels/823564092379627520/856529851274887168/916268033352302633
@@ -678,21 +679,21 @@ impl ProcessScoresOptions {
             // 3) Validator 6anBvYWGwkkZPAaPF6BmzF6LUPfP2HFVhQUAWckKH9LZ, marinade-staked 55816.30 SOL, score-pct:0.7280%, 1 stake-accounts
             // next potential marinade stake: (4block-team validator#2)
             // 0) #6 0.72% m.stk:0 should:49761 next:+49761 credits:373961 cm:0 dcc:0.29698 4BLOCK.TEAM 2 - Now 0% Fees → 1% from Q1/2023 GfZybqTfVXiiF7yjwnqfwWKm2iwP96sSbHsGdSpwGucH
-            "GfZybqTfVXiiF7yjwnqfwWKm2iwP96sSbHsGdSpwGucH".into(),
+            ("GfZybqTfVXiiF7yjwnqfwWKm2iwP96sSbHsGdSpwGucH".into(), default_blacklist_reason.clone()),
             // Scrooge_McDuck
             // changing commission from 0% to 100% on epoch boundaries
             // https://www.validators.app/commission-changes?locale=en&network=mainnet
-            "AxP8nEVvay26BvFqSVWFC73ciQ4wVtmhNjAkUz5szjCg".into(),
+            ("AxP8nEVvay26BvFqSVWFC73ciQ4wVtmhNjAkUz5szjCg".into(), default_blacklist_reason.clone()),
             // Node Brothers
             // changing commission from 0% to 10% on epoch boundaries
             // https://www.validators.app/commission-changes/6895?locale=en&network=mainnet
-            "DeFiDeAgFR29GgKdyyVZdvsELbDR8k4WqprWGtgtbi1o".into(),
+            ("DeFiDeAgFR29GgKdyyVZdvsELbDR8k4WqprWGtgtbi1o".into(), default_blacklist_reason.clone()),
             // VymD
             // Vote lagging
-            "8Pep3GmYiijRALqrMKpez92cxvF4YPTzoZg83uXh14pW".into(),
+            ("8Pep3GmYiijRALqrMKpez92cxvF4YPTzoZg83uXh14pW".into(), default_blacklist_reason.clone()),
             // Parrot
             // Down for ~2 weeks
-            "GBU4potq4TjsmXCUSJXbXwnkYZP8725ZEaeDrLrdQhbA".into(),
+            ("GBU4potq4TjsmXCUSJXbXwnkYZP8725ZEaeDrLrdQhbA".into(), default_blacklist_reason.clone()),
             // The following validators were offline for at least 36 hours when solana was halted in May '22
             // Just a warning for now.
             // 2cFGQhgkuibqREEXvz7wEb5CwUqGHfBSTB2oa1hmhkcw
@@ -710,22 +711,22 @@ impl ProcessScoresOptions {
             // 7K8DVxtNJGnMtUY1CQJT5jcs8sFGSZTDiG7kowvFpECh
 
             // The following were down for more than 36 hours in halt #2 (May '22) and #3 (June '22)
-            "5wNag8umJhaaj9gGdqmBz7Xwwy1NL5yQ1QbvPdQrDd3h".into(),
-            "7oX5QSP9yBjT1F1sRSDCX91ZxibETqemDM4WLDju5rTM".into(),
-            "Cva4NEnBRYfFv8i3RtcMTbEYgyVNmewk2aAgh4fco2mP".into(),
+            ("5wNag8umJhaaj9gGdqmBz7Xwwy1NL5yQ1QbvPdQrDd3h".into(), default_blacklist_reason.clone()),
+            ("7oX5QSP9yBjT1F1sRSDCX91ZxibETqemDM4WLDju5rTM".into(), default_blacklist_reason.clone()),
+            ("Cva4NEnBRYfFv8i3RtcMTbEYgyVNmewk2aAgh4fco2mP".into(), default_blacklist_reason.clone()),
 
             // Exiting mainnet:
-            "2vxNDV7aAbrb4Whnxs9LiuxCsm9oubX3c1hozXPsoD97".into(),
-            
+            ("2vxNDV7aAbrb4Whnxs9LiuxCsm9oubX3c1hozXPsoD97".into(), default_blacklist_reason.clone()),
+
             // Marinade stake puts them in superminority, unstaking puts them back - this creates loop of stake/unstake
-            "CogentC52e7kktFfWHwsqSmr8LiS1yAtfqhHcftCPcBJ".into(),
-        ];
+            ("CogentC52e7kktFfWHwsqSmr8LiS1yAtfqhHcftCPcBJ".into(), "Marinade stake could possibly move the validator to superminority, forcing us to remove it soon, creating stake-unstake-stake-... cycle.".to_string()),
+        ]);
 
         for v in validator_scores.iter_mut() {
-            if blacklisted.contains(&v.vote_address) {
+            if let Some(reason) = blacklisted.get(&v.vote_address) {
                 info!("Blacklisted validator found: {}", v.vote_address);
                 v.remove_level = 2;
-                v.remove_level_reason = format!("This validator is blacklisted for bad behavior (cheating with credits, end of epoch change of commission). It won’t be able to receive stake from Marinade.");
+                v.remove_level_reason = reason.clone();
                 v.marinade_score = 0;
             }
         }
