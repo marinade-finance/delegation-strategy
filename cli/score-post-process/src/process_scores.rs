@@ -720,6 +720,12 @@ impl ProcessScoresOptions {
 
             // Marinade stake puts them in superminority, unstaking puts them back - this creates loop of stake/unstake
             ("CogentC52e7kktFfWHwsqSmr8LiS1yAtfqhHcftCPcBJ".into(), "This validator is close to the superminority threshold and will not receive stake to avoid multiple stake/unstake operations on successive epochs.".to_string()),
+
+            // changing commission between 0% and 10% on epoch boundaries
+            ("42GfJFeWySe1zt7xYxXNFK1E2V7xXnf1Jpc6B4g63QTm".into(), default_blacklist_reason.clone()),
+
+            // changing commission between 0% and 10% on epoch boundaries
+            ("DpvUS8Losp2UGGaSGyupyKwQqHkmruzfwrZg2VYK7Zg7".into(), default_blacklist_reason.clone()),
         ]);
 
         for v in validator_scores.iter_mut() {
