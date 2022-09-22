@@ -729,6 +729,9 @@ impl ProcessScoresOptions {
 
             // changing commission before and after our bot's runs
             ("GUTjLTQTCmeBzTrBgCsWSM7G2JrsLvwXbXdafWvicqbr".into(), default_blacklist_reason.clone()),
+            
+            // changing commission on epoch boundaries (e.g. 3frtXYL2Wx8oDkmA2Me9xxKWDXp6vcdnJDT2Bcf7w17jNiVZ4vkAn9EQNqqUdJDnPoGpPDry7YTy8KSnjx8wtUD9, 4DS6MYpbsfL3p2afkbE16gcT5WtbW4ndQK4P3jCMWenrvkxnGBM3kXbkhkphB4KcS7DJBCDCMFsGRbigxREcDajn)
+            ("G2v6wsh4xVHj1xMLtLFzX2hP6T1TTxti5ZxK3iv8TJQZ".into(), default_blacklist_reason.clone()),
         ]);
 
         for v in validator_scores.iter_mut() {
