@@ -30,7 +30,10 @@ use solana_sdk::{
 };
 
 use std::io::{Read, Write};
-use std::{collections::HashMap, str::FromStr};
+use std::{
+    collections::{HashMap, HashSet},
+    str::FromStr,
+};
 
 use std::sync::Arc;
 use structopt::StructOpt;
@@ -93,6 +96,20 @@ pub struct ProcessScoresOptions {
         default_value = "430"
     )]
     stake_top_n_validators: usize,
+
+    #[structopt(
+        long = "marinade-referral-program-id",
+        help = "Address of the Marinade referral program",
+        default_value = "MR2LqxoSbw831bNy68utpu5n4YqBH3AzDmddkgk9LQv"
+    )]
+    marinade_referral_program_id: Pubkey,
+
+    #[structopt(
+        long = "stake-from-colalteral-max-pct",
+        help = "How much of total stake can be given to validators with stake from the referral/collateral.",
+        default_value = "20"
+    )]
+    stake_from_collateral_max_pct: u64,
 }
 
 #[allow(dead_code)]
@@ -130,6 +147,8 @@ struct ValidatorScore {
     rank: u32,
     score: u32,
     marinade_score: u32,
+    collateral_score: u32,
+    collateral_shares: u64,
     vote_score: u32,
     votes_read: u64,
     votes_effective: u64,
@@ -278,6 +297,31 @@ impl ProcessScoresOptions {
             .total_active_balance
             .saturating_add(sol_to_lamports(100000.0));
 
+        let total_collateral_shares =
+            self.load_shares_from_collateral(&marinade, &mut validator_scores)?;
+
+        let total_stake_from_collateral = total_collateral_shares
+            .min(self.stake_from_collateral_max_pct * total_stake_target / 100);
+
+        let stake_target_without_collateral = total_stake_target - total_stake_from_collateral;
+
+        info!(
+            "Total stake target: {}",
+            lamports_to_sol(total_stake_target)
+        );
+        info!(
+            "Total collateral shares: {}",
+            lamports_to_sol(total_collateral_shares)
+        );
+        info!(
+            "Total stake from collateral: {}",
+            lamports_to_sol(total_stake_from_collateral)
+        );
+        info!(
+            "Stake target without collateral: {}",
+            lamports_to_sol(stake_target_without_collateral)
+        );
+
         // Compute marinade_staked from the current on-chain validator data
         self.load_marinade_staked(&marinade, &mut validator_scores)?;
 
@@ -287,7 +331,7 @@ impl ProcessScoresOptions {
 
         self.apply_commission_bonus(&mut validator_scores);
 
-        self.update_should_have(&mut validator_scores, total_stake_target);
+        self.update_should_have(&mut validator_scores, stake_target_without_collateral);
 
         self.adjust_marinade_score_for_overstaked(&mut validator_scores);
 
@@ -301,7 +345,9 @@ impl ProcessScoresOptions {
         self.distribute_vote_score(&mut validator_scores);
 
         // Apply cap
-        self.recompute_score_with_capping(&mut validator_scores, total_stake_target)?;
+        self.recompute_score_with_capping(&mut validator_scores, stake_target_without_collateral)?;
+
+        self.apply_stake_from_collateral(&mut validator_scores, total_stake_from_collateral);
 
         // Final assertions
         self.check_final_scores(&validator_scores);
@@ -311,6 +357,54 @@ impl ProcessScoresOptions {
 
         self.write_results_to_file(validator_scores)?;
         Ok(())
+    }
+
+    fn load_shares_from_collateral(
+        &self,
+        marinade: &RpcMarinade,
+        validator_scores: &mut Vec<ValidatorScore>,
+    ) -> anyhow::Result<u64> {
+        let deposits_to_referral =
+            marinade.fetch_deposits_to_referral(self.marinade_referral_program_id)?;
+
+        let current_collateral = marinade.get_current_collateral()?;
+
+        let shares: HashMap<_, _> = deposits_to_referral.iter().map(|(vote, deposit)| {
+            let deposit = *deposit;
+            let collateral = *current_collateral.get(vote).unwrap_or(&0);
+
+            let share = if collateral < deposit {
+                log::warn!("Validator {} has deposited {} through referral but has only {} in collateral!", vote, lamports_to_sol(deposit), lamports_to_sol(collateral));
+                collateral
+            } else {
+                log::info!("Validator {} has deposited {} through referral and still has {} in collateral!", vote, lamports_to_sol(deposit), lamports_to_sol(collateral));
+                deposit
+            };
+
+            (vote.clone(), share)
+        }).collect();
+
+        for validator_score in validator_scores.iter_mut() {
+            validator_score.collateral_shares =
+                *shares.get(&validator_score.vote_address).unwrap_or(&0);
+        }
+
+        Ok(validator_scores.iter().map(|s| s.collateral_shares).sum())
+    }
+
+    fn apply_stake_from_collateral(
+        &self,
+        validator_scores: &mut Vec<ValidatorScore>,
+        total_stake_from_collateral: u64,
+    ) {
+        let sum_shares: u64 = validator_scores.iter().map(|s| s.collateral_shares).sum();
+        for v in validator_scores.iter_mut() {
+            v.collateral_score =
+                (proportional(total_stake_from_collateral, v.collateral_shares, sum_shares)
+                    .unwrap()
+                    / LAMPORTS_PER_SOL) as u32;
+            v.score += v.collateral_score;
+        }
     }
 
     fn apply_commission_bonus(&self, validator_scores: &mut Vec<ValidatorScore>) -> () {
@@ -435,6 +529,8 @@ impl ProcessScoresOptions {
                 epoch: epoch_info.epoch,
                 rank: record.rank,
                 marinade_score: record.score,
+                collateral_score: 0,
+                collateral_shares: 0,
                 vote_score: 0,
                 votes_read: 0,
                 votes_effective: 0,
@@ -729,7 +825,7 @@ impl ProcessScoresOptions {
 
             // changing commission before and after our bot's runs
             ("GUTjLTQTCmeBzTrBgCsWSM7G2JrsLvwXbXdafWvicqbr".into(), default_blacklist_reason.clone()),
-            
+
             // changing commission on epoch boundaries (e.g. 3frtXYL2Wx8oDkmA2Me9xxKWDXp6vcdnJDT2Bcf7w17jNiVZ4vkAn9EQNqqUdJDnPoGpPDry7YTy8KSnjx8wtUD9, 4DS6MYpbsfL3p2afkbE16gcT5WtbW4ndQK4P3jCMWenrvkxnGBM3kXbkhkphB4KcS7DJBCDCMFsGRbigxREcDajn)
             ("G2v6wsh4xVHj1xMLtLFzX2hP6T1TTxti5ZxK3iv8TJQZ".into(), default_blacklist_reason.clone()),
         ]);
@@ -795,7 +891,7 @@ impl ProcessScoresOptions {
     fn update_should_have(
         &self,
         validator_scores: &mut Vec<ValidatorScore>,
-        total_stake_target: u64,
+        stake_target_without_collateral: u64,
     ) -> () {
         let total_marinade_score: u64 = validator_scores
             .iter()
@@ -804,8 +900,8 @@ impl ProcessScoresOptions {
 
         for v in validator_scores.iter_mut() {
             v.should_have = lamports_to_sol(
-                (v.marinade_score as f64 * total_stake_target as f64 / total_marinade_score as f64)
-                    as u64,
+                (v.marinade_score as f64 * stake_target_without_collateral as f64
+                    / total_marinade_score as f64) as u64,
             );
         }
     }
@@ -838,7 +934,7 @@ impl ProcessScoresOptions {
     fn recompute_score_with_capping(
         &self,
         validator_scores: &mut Vec<ValidatorScore>,
-        total_stake_target: u64,
+        stake_target_without_collateral: u64,
     ) -> anyhow::Result<()> {
         let total_score = validator_scores.iter().map(|s| s.score as u64).sum();
 
@@ -886,7 +982,7 @@ impl ProcessScoresOptions {
             v.score = score_new as u32;
             v.should_have = lamports_to_sol(proportional(
                 v.score as u64,
-                total_stake_target,
+                stake_target_without_collateral,
                 total_score,
             )?);
             v.rank = rank;
