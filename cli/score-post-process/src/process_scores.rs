@@ -107,7 +107,7 @@ pub struct ProcessScoresOptions {
     #[structopt(
         long = "stake-from-colalteral-max-pct",
         help = "How much of total stake can be given to validators with stake from the referral/collateral.",
-        default_value = "20"
+        default_value = "30"
     )]
     stake_from_collateral_max_pct: u64,
 }
@@ -398,13 +398,20 @@ impl ProcessScoresOptions {
         total_stake_from_collateral: u64,
     ) {
         let sum_shares: u64 = validator_scores.iter().map(|s| s.collateral_shares).sum();
+        let mut sum_score = 0;
         for v in validator_scores.iter_mut() {
-            v.collateral_score =
-                (proportional(total_stake_from_collateral, v.collateral_shares, sum_shares)
-                    .unwrap()
-                    / LAMPORTS_PER_SOL) as u32;
-            v.score += v.collateral_score;
+            if v.collateral_shares > 0 {
+                v.collateral_score =
+                    (proportional(total_stake_from_collateral, v.collateral_shares, sum_shares)
+                        .unwrap()
+                        / LAMPORTS_PER_SOL) as u32;
+                v.score += v.collateral_score;
+                sum_score += v.collateral_score;
+                v.remove_level = 0;
+                v.remove_level_reason = "".to_string();
+            }
         }
+        log::info!("Total score from collateral: {}", sum_score);
     }
 
     fn apply_commission_bonus(&self, validator_scores: &mut Vec<ValidatorScore>) -> () {
