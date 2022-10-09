@@ -9,11 +9,9 @@ use std::error;
 pub type IdentityToParticipant = HashMap<Pubkey, Pubkey>;
 
 pub fn get_participants_identity_maps(
+    rpc_client: &RpcClient,
 ) -> Result<(IdentityToParticipant, IdentityToParticipant), Box<dyn error::Error>> {
-    let participants = get_participants_with_state(
-        &RpcClient::new("https://api.mainnet-beta.solana.com".to_string()),
-        Some(ParticipantState::Approved),
-    )?;
+    let participants = get_participants_with_state(rpc_client, Some(ParticipantState::Approved))?;
 
     info!("{} participants loaded", participants.len());
     assert!(participants.len() > 450);

@@ -22,7 +22,7 @@ fn main() -> BoxResult<()> {
     let (config, rpc_client) = get_config()?;
 
     let (mainnet_identity_to_participant, testnet_identity_to_participant) =
-        get_participants_identity_maps()?;
+        get_participants_identity_maps(&rpc_client)?;
 
     let (validator_list, identity_to_participant) = match config.cluster {
         Cluster::MainnetBeta => (
