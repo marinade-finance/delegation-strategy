@@ -11,9 +11,12 @@ CSV_PATH="$SCRIPT_DIR/../db/score-all-mainnet-beta/mainnet-beta-validator-detail
 # Fetch sqlite db with past scores
 "$SCRIPT_DIR/force-fetch-db"
 
+RPC_URL="${RPC_URL:-https://api.mainnet-beta.solana.com}"
+
 # Score past epoch, the results are available in db/score-all-mainnet-beta directory
 "$BIN_DIR/score-past-epoch" \
   --cluster mainnet-beta \
+  --url "$RPC_URL" \
   --min-release-version 1.10.32 \
   --max-old-release-version-percentage 30 \
   $* \
