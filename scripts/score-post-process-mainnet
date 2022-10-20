@@ -23,7 +23,7 @@ date
   --avg-file "$DATA_DIR/avg.csv" \
   --validators-file "$DATA_DIR/solana-validators.json" \
   --result-file "$DATA_DIR/post-processed-scores.csv" \
-  --min-release-version 1.10.32 \
+  --min-release-version 1.13.3 \
   --escrow-relocker "tovt1VkTE2T4caWoeFP6a2xSFoew5mNpd7FWidyyMuk" \
   --gauge-meister "mvgmBamY7hDWxLNGLshMoZn8nt2P8tKnKhaBeXMVajZ"
 

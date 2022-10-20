@@ -16,6 +16,7 @@ use solana_client::{
     rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
     rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType},
 };
+use solana_sdk::native_token::*;
 use std::collections::*;
 
 use crate::rpc_client_helpers::RpcClientHelpers;
@@ -75,6 +76,68 @@ pub struct Gauge {
     pub snapshot_slot: u64,
     pub snapshot_total_weight: u64,
     pub info: Vec<u8>,
+}
+
+#[account]
+#[derive(Debug, Default)]
+pub struct ReferralState {
+    // Partner name
+    pub partner_name: String, //max-length 20 bytes
+
+    /// set value if this referral-account is a stake-account-as-collateral partner record
+    pub validator_vote_key: Option<Pubkey>,
+    pub keep_self_stake_pct: u8, // if stake-account-as-collateral partner record, how much % of deposit_stake_account_amount to keep in the validator
+
+    // partner Beneficiary account (native account)
+    pub partner_account: Pubkey,
+    // token account where to make payment (mSOL address for partner_account)
+    pub msol_token_partner_account: Pubkey,
+
+    // accumulated deposit-sol amount (SOL, u64)
+    pub deposit_sol_amount: u64,
+    // accumulated count of deposit-sol operations (u64, for stats/monitoring)
+    pub deposit_sol_operations: u64,
+
+    // accumulated deposit-stake-account amount (SOL, u64)
+    pub deposit_stake_account_amount: u64,
+    // accumulated count of deposit-stake-account operations (u64, for stats/monitoring)
+    pub deposit_stake_account_operations: u64,
+
+    // accumulated liquid-unstake treasury fees (mSOL, u64)
+    pub liq_unstake_msol_fees: u64,
+    // accumulated liquid-unstake amount (SOL, u64)
+    pub liq_unstake_sol_amount: u64,
+    // accumulated liquid-unstake amount (mSOL, u64)
+    pub liq_unstake_msol_amount: u64,
+    // accumulated count of unstake operations (u64, for stats/monitoring)
+    pub liq_unstake_operations: u64,
+
+    // accumulated delayed-unstake amount (mSOL, u64)
+    pub delayed_unstake_amount: u64,
+    // accumulated count of delayed-unstake operations (u64, for stats/monitoring)
+    pub delayed_unstake_operations: u64,
+
+    // Base % cut for the partner (basis points, default 1000 => 10%)
+    pub base_fee: u32,
+    // Max % cut for the partner (basis points, default 1000 => 10%)
+    pub max_fee: u32,
+    // Net Stake target for the max % (for example 100K SOL)
+    pub max_net_stake: u64,
+
+    // emergency-pause flag (bool)
+    pub pause: bool,
+
+    // fees that will be assigned to referrals per operation, calculated in basis points
+    pub operation_deposit_sol_fee: u8,
+    pub operation_deposit_stake_account_fee: u8,
+    pub operation_liquid_unstake_fee: u8,
+    pub operation_delayed_unstake_fee: u8,
+
+    // accumulators for operation fees paid
+    pub accum_deposit_sol_fee: u64,
+    pub accum_deposit_stake_account_fee: u64,
+    pub accum_liquid_unstake_fee: u64,
+    pub accum_delayed_unstake_fee: u64,
 }
 
 pub struct RpcMarinade {
@@ -214,6 +277,49 @@ impl RpcMarinade {
             .iter()
             .flat_map(|gauge| match Pubkey::try_from_slice(&gauge.info) {
                 Ok(vote_address) => Some((vote_address.to_string(), gauge.total_weight)),
+                _ => None,
+            })
+            .collect())
+    }
+
+    pub fn get_current_collateral(&self) -> anyhow::Result<HashMap<String, u64>> {
+        Ok(HashMap::from([(
+            "DumiCKHVqoCQKD8roLApzR5Fit8qGV5fVQsJV9sTZk4a".into(),
+            sol_to_lamports(1_000_000.0),
+        )]))
+    }
+
+    pub fn fetch_deposits_to_referral(
+        &self,
+        program_id: Pubkey,
+    ) -> anyhow::Result<HashMap<String, u64>> {
+        let referral_account_size = 356;
+        let accounts = self.client.get_program_accounts_with_config(
+            &program_id,
+            RpcProgramAccountsConfig {
+                filters: Some(vec![RpcFilterType::DataSize(referral_account_size)]),
+                account_config: RpcAccountInfoConfig {
+                    encoding: Some(UiAccountEncoding::Base64),
+                    commitment: Some(self.client.commitment()),
+                    data_slice: None,
+                },
+                with_context: None,
+            },
+        )?;
+
+        let accounts: Vec<ReferralState> = accounts
+            .iter()
+            .flat_map(|(_, account)| {
+                ReferralState::try_deserialize_unchecked(&mut &account.data[..])
+            })
+            .collect();
+
+        Ok(accounts
+            .iter()
+            .filter_map(|account| match account.validator_vote_key {
+                Some(vote_key) => {
+                    Some((vote_key.to_string(), account.deposit_stake_account_amount))
+                }
                 _ => None,
             })
             .collect())
