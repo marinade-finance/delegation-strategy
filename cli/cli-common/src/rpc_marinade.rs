@@ -284,7 +284,7 @@ impl RpcMarinade {
 
     pub fn get_current_collateral(&self) -> anyhow::Result<HashMap<String, u64>> {
         Ok(HashMap::from([(
-            "GNZ1PAAS33davY4Q1BMEpZEpVBtRtGvSpcTH5wYVkkVt".into(),
+            "DumiCKHVqoCQKD8roLApzR5Fit8qGV5fVQsJV9sTZk4a".into(),
             sol_to_lamports(1_000_000.0),
         )]))
     }
