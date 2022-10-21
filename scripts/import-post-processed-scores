@@ -17,6 +17,8 @@ CREATE TABLE post_process_imported(
   rank INT,
   score INTEGER,
   marinade_score INTEGER,
+  collateral_score INTEGER,
+  collateral_shares INTEGER,
   vote_score INTEGER,
   votes_read INTEGER,
   votes_effective INTEGER,
@@ -62,12 +64,12 @@ delete from scores2
 where epoch = (select distinct epoch from post_process_imported);
 
 insert into scores2
-  (epoch ,  rank ,  score ,   marinade_score ,   vote_score ,   votes_read ,   votes_effective ,   name ,  credits_observed ,  vote_address ,
+  (epoch ,  rank ,  score ,   marinade_score ,   collateral_score, collateral_shares, vote_score ,   votes_read ,   votes_effective ,   name ,  credits_observed ,  vote_address ,
   commission ,  max_commission,  average_position ,  data_center_concentration ,  data_center_asn ,  data_center_location ,  avg_active_stake ,
   apy ,  delinquent ,  this_epoch_credits ,  pct ,  marinade_staked ,  should_have  ,
   remove_level ,  remove_level_reason,  under_nakamoto_coefficient ,  keybase_id ,  identity ,  stake_concentration ,  base_score ,  url ,  version)
 select
-epoch ,  rank ,  score ,   marinade_score ,   vote_score ,   votes_read ,   votes_effective ,   name ,  credits_observed ,  vote_address ,
+epoch ,  rank ,  score ,   marinade_score ,   collateral_score, collateral_shares, vote_score ,   votes_read ,   votes_effective ,   name ,  credits_observed ,  vote_address ,
 commission ,  max_commission,  average_position ,  data_center_concentration ,  data_center_asn ,  data_center_location ,  avg_active_stake ,
 apy ,  delinquent ,  this_epoch_credits ,  pct ,  marinade_staked ,  should_have  ,
 remove_level ,  remove_level_reason,  under_nakamoto_coefficient ,  keybase_id ,  identity ,  stake_concentration ,  base_score ,  url ,  version
