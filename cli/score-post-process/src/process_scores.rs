@@ -407,8 +407,11 @@ impl ProcessScoresOptions {
                         / LAMPORTS_PER_SOL) as u32;
                 v.score += v.collateral_score;
                 sum_score += v.collateral_score;
-                v.remove_level = 0;
-                v.remove_level_reason = "".to_string();
+                v.should_have += v.collateral_score as f64;
+                if v.remove_level > 0 {
+                    v.remove_level = 0;
+                    v.remove_level_reason = "self stake override".to_string();
+                }
             }
         }
         log::info!("Total score from collateral: {}", sum_score);
