@@ -285,7 +285,7 @@ impl RpcMarinade {
     pub fn get_current_collateral(&self) -> anyhow::Result<HashMap<String, u64>> {
         Ok(HashMap::from([(
             "DumiCKHVqoCQKD8roLApzR5Fit8qGV5fVQsJV9sTZk4a".into(),
-            sol_to_lamports(1_000_000.0),
+            sol_to_lamports(1_500_000.0),
         )]))
     }
 
@@ -318,7 +318,7 @@ impl RpcMarinade {
             .iter()
             .filter_map(|account| match account.validator_vote_key {
                 Some(vote_key) => {
-                    Some((vote_key.to_string(), account.deposit_stake_account_amount))
+                    Some((vote_key.to_string(), account.deposit_stake_account_amount + account.deposit_sol_amount))
                 }
                 _ => None,
             })
