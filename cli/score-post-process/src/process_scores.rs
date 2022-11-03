@@ -283,6 +283,7 @@ impl ProcessScoresOptions {
 
         // Get this_epoch_credits & delinquent data from 'solana validators' output
         let avg_this_epoch_credits = self.load_solana_validators_file(&mut validator_scores)?;
+        info!("Average this epoch credits: {}", avg_this_epoch_credits);
 
         // Find unhealthy validators and set their scores to 0 or 50 %
         self.decrease_scores_for_unhealthy(&mut validator_scores, avg_this_epoch_credits);
@@ -711,9 +712,11 @@ impl ProcessScoresOptions {
                         }
                         if let serde_json::Value::Number(x) = &json_info["epochCredits"] {
                             let credits = x.as_u64().unwrap();
-                            v.this_epoch_credits = credits;
-                            sum_this_epoch_credits += credits;
-                            count_credit_data_points += 1;
+                            if credits > 0 {
+                                v.this_epoch_credits = credits;
+                                sum_this_epoch_credits += credits;
+                                count_credit_data_points += 1;
+                            }
                         }
                     }
                 }
