@@ -86,7 +86,7 @@ pub struct ProcessScoresOptions {
     #[structopt(
         long = "vote-gauges-stake-pct",
         help = "How much of total stake is affected by votes.",
-        default_value = "10" // %
+        default_value = "15" // %
     )]
     pub vote_gauges_stake_pct: u32,
 
@@ -841,6 +841,9 @@ impl ProcessScoresOptions {
 
             // changing commission on epoch boundaries (e.g. 3frtXYL2Wx8oDkmA2Me9xxKWDXp6vcdnJDT2Bcf7w17jNiVZ4vkAn9EQNqqUdJDnPoGpPDry7YTy8KSnjx8wtUD9, 4DS6MYpbsfL3p2afkbE16gcT5WtbW4ndQK4P3jCMWenrvkxnGBM3kXbkhkphB4KcS7DJBCDCMFsGRbigxREcDajn)
             ("G2v6wsh4xVHj1xMLtLFzX2hP6T1TTxti5ZxK3iv8TJQZ".into(), default_blacklist_reason.clone()),
+            
+            // changing commission on epoch boundaries (e.g. QgXGHawoM8vePwNASfhvMRvm8LgLNinUM5bdeSZMtoehnyP3VLHt2MFUNeyRNP1wGJs5VqrxQPXuxskMMvzjY7E, 3nx6GhUkTVNg7JcNV5GFEFoBx3tCtPgxbqe7NX3o8ZWbM3s4U2aWfSm1ExcMRWprfqaZ9nCoZJedbSU26u9EEiZ)
+            ("4hDeRsRJBsvbA1KNjGmZ9zB1Nv3Cn2KbANNUCQwjBh29".into(), default_blacklist_reason.clone()),
         ]);
 
         for v in validator_scores.iter_mut() {
