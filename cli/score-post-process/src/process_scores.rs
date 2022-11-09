@@ -110,6 +110,13 @@ pub struct ProcessScoresOptions {
         default_value = "30"
     )]
     stake_from_collateral_max_pct: u64,
+
+    #[structopt(
+        long = "stake-delta",
+        help = "Stake delta considered for stake target",
+        default_value = "100000"
+    )]
+    stake_delta: i64,
 }
 
 #[allow(dead_code)]
@@ -295,8 +302,13 @@ impl ProcessScoresOptions {
         let total_stake_target = marinade
             .state
             .validator_system
-            .total_active_balance
-            .saturating_add(sol_to_lamports(100000.0));
+            .total_active_balance;
+
+        let total_stake_target = if self.stake_delta < 0 {
+            total_stake_target.saturating_sub(sol_to_lamports(self.stake_delta.abs() as f64))
+        } else {
+            total_stake_target.saturating_add(sol_to_lamports(self.stake_delta.abs() as f64))
+        };
 
         let total_collateral_shares =
             self.load_shares_from_collateral(&marinade, &mut validator_scores)?;

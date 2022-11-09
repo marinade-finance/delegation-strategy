@@ -101,7 +101,7 @@ INSERT INTO scores select * from imported;
 -- recompute avg table with last 5 epochs
 -- if score=0 from imported => below nakamoto coefficient, or commission 100% or less than 100 SOL staked
 -- also we set score=0 if below 48% avg or less than 5 epochs on record
--- create pct column and set to zero, will update after when selecting top 250
+-- create pct column and set to zero, will update after when selecting top 500
 DROP TABLE IF EXISTS avg;
 create table AVG as
 select 0 as rank, epoch,keybase_id, vote_address,name,
