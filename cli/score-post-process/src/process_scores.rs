@@ -215,8 +215,8 @@ impl ValidatorScore {
             );
         // Note: self.delinquent COMMENTED, a good validator could be delinquent for several minutes during an upgrade
         // it's better to consider this_epoch_credits as filter and not the on/off flag of self.delinquent
-        } else if self.delinquent {
-            return (2, format!("DELINQUENT")); // keep delinquent validators in the list so people can escape by depositing stake accounts from them into Marinade
+//         } else if self.delinquent {
+//             return (2, format!("DELINQUENT")); // keep delinquent validators in the list so people can escape by depositing stake accounts from them into Marinade
         } else if self.credits_observed == 0 {
             return (2, format!("This validator isn’t producing credits and will not be able to receive stake from Marinade."));
         // keep them in the list so people can escape by depositing stake accounts from them into Marinade
