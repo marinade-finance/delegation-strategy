@@ -856,6 +856,15 @@ impl ProcessScoresOptions {
             
             // changing commission on epoch boundaries (e.g. QgXGHawoM8vePwNASfhvMRvm8LgLNinUM5bdeSZMtoehnyP3VLHt2MFUNeyRNP1wGJs5VqrxQPXuxskMMvzjY7E, 3nx6GhUkTVNg7JcNV5GFEFoBx3tCtPgxbqe7NX3o8ZWbM3s4U2aWfSm1ExcMRWprfqaZ9nCoZJedbSU26u9EEiZ)
             ("4hDeRsRJBsvbA1KNjGmZ9zB1Nv3Cn2KbANNUCQwjBh29".into(), default_blacklist_reason.clone()),
+            
+            // commission
+            ("65U5oJPjCpQPuLSUPJZVFWSQgRmVtgcZwo6fJREFiYoz".into(), default_blacklist_reason.clone()),
+            ("GUTjLTQTCmeBzTrBgCsWSM7G2JrsLvwXbXdafWvicqbr".into(), default_blacklist_reason.clone()),
+            ("3Ueg3qrAVv95tJzTiKM2dd33NswZT77yRf9wXcBDCn2c".into(), default_blacklist_reason.clone()),
+            ("ND5jXgjtiPC34Qf71oEiDrcim4hPhyPdhBrqeZidUxF".into(), default_blacklist_reason.clone()),
+            ("7zx69bryF4TnqRGTzE7CJkSXUZ495nFFZk4RCkXQEcgH".into(), default_blacklist_reason.clone()),
+            ("A5G8TTnkxPqTDkpeM9LPjwvE4mQ8E7vTzdBNvLqs1pTg".into(), default_blacklist_reason.clone()),
+            ("DdiWSFE9u9Gu1GqGVaPWqAAk6TuYA7t35tb54fCu37uS".into(), default_blacklist_reason.clone()),
         ]);
 
         for v in validator_scores.iter_mut() {
