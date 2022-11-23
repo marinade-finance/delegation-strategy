@@ -86,7 +86,7 @@ pub struct ProcessScoresOptions {
     #[structopt(
         long = "vote-gauges-stake-pct",
         help = "How much of total stake is affected by votes.",
-        default_value = "15" // %
+        default_value = "20" // %
     )]
     pub vote_gauges_stake_pct: u32,
 
