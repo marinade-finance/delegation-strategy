@@ -299,10 +299,7 @@ impl ProcessScoresOptions {
         self.apply_blacklist(&mut validator_scores);
 
         // imagine a +100K stake delta
-        let total_stake_target = marinade
-            .state
-            .validator_system
-            .total_active_balance;
+        let total_stake_target = marinade.state.validator_system.total_active_balance;
 
         let total_stake_target = if self.stake_delta < 0 {
             total_stake_target.saturating_sub(sol_to_lamports(self.stake_delta.abs() as f64))
@@ -791,7 +788,10 @@ impl ProcessScoresOptions {
             // 1) #14 Validator rep1xGEJzUiQCQgnYjNn76mFRpiPaZaKRwc13wm8mNr, score-pct:0.6037%
             // ValidatorScoreRecord { rank: 14, pct: 0.827161338644014, epoch: 252, keybase_id: "replicantstaking", name: "Replicant Staking", vote_address: "rep1xGEJzUiQCQgnYjNn76mFRpiPaZaKRwc13wm8mNr", score: 3211936, average_position: 57.8258431048359, commission: 0, epoch_credits: 364279, data_center_concentration: 0.03242, base_score: 363924.0, mult: 8.82584310483592, avg_score: 3211936.0, avg_active_stake: 6706.7905232706 }
             // avg-staked 6706.79, marinade-staked 50.13 (0.75%), should_have 39238.66, to balance +stake 39188.54 (accum +stake to this point 39188.54)
-            ("rep1xGEJzUiQCQgnYjNn76mFRpiPaZaKRwc13wm8mNr".into(), default_blacklist_reason.clone()),
+            (
+                "rep1xGEJzUiQCQgnYjNn76mFRpiPaZaKRwc13wm8mNr".into(),
+                default_blacklist_reason.clone(),
+            ),
             // manually slashed-paused
             // Same entity 4block-team with 2 validators
             // https://discord.com/channels/823564092379627520/856529851274887168/916268033352302633
@@ -800,21 +800,36 @@ impl ProcessScoresOptions {
             // 3) Validator 6anBvYWGwkkZPAaPF6BmzF6LUPfP2HFVhQUAWckKH9LZ, marinade-staked 55816.30 SOL, score-pct:0.7280%, 1 stake-accounts
             // next potential marinade stake: (4block-team validator#2)
             // 0) #6 0.72% m.stk:0 should:49761 next:+49761 credits:373961 cm:0 dcc:0.29698 4BLOCK.TEAM 2 - Now 0% Fees → 1% from Q1/2023 GfZybqTfVXiiF7yjwnqfwWKm2iwP96sSbHsGdSpwGucH
-            ("GfZybqTfVXiiF7yjwnqfwWKm2iwP96sSbHsGdSpwGucH".into(), default_blacklist_reason.clone()),
+            (
+                "GfZybqTfVXiiF7yjwnqfwWKm2iwP96sSbHsGdSpwGucH".into(),
+                default_blacklist_reason.clone(),
+            ),
             // Scrooge_McDuck
             // changing commission from 0% to 100% on epoch boundaries
             // https://www.validators.app/commission-changes?locale=en&network=mainnet
-            ("AxP8nEVvay26BvFqSVWFC73ciQ4wVtmhNjAkUz5szjCg".into(), default_blacklist_reason.clone()),
+            (
+                "AxP8nEVvay26BvFqSVWFC73ciQ4wVtmhNjAkUz5szjCg".into(),
+                default_blacklist_reason.clone(),
+            ),
             // Node Brothers
             // changing commission from 0% to 10% on epoch boundaries
             // https://www.validators.app/commission-changes/6895?locale=en&network=mainnet
-            ("DeFiDeAgFR29GgKdyyVZdvsELbDR8k4WqprWGtgtbi1o".into(), default_blacklist_reason.clone()),
+            (
+                "DeFiDeAgFR29GgKdyyVZdvsELbDR8k4WqprWGtgtbi1o".into(),
+                default_blacklist_reason.clone(),
+            ),
             // VymD
             // Vote lagging
-            ("8Pep3GmYiijRALqrMKpez92cxvF4YPTzoZg83uXh14pW".into(), default_blacklist_reason.clone()),
+            (
+                "8Pep3GmYiijRALqrMKpez92cxvF4YPTzoZg83uXh14pW".into(),
+                default_blacklist_reason.clone(),
+            ),
             // Parrot
             // Down for ~2 weeks
-            ("GBU4potq4TjsmXCUSJXbXwnkYZP8725ZEaeDrLrdQhbA".into(), default_blacklist_reason.clone()),
+            (
+                "GBU4potq4TjsmXCUSJXbXwnkYZP8725ZEaeDrLrdQhbA".into(),
+                default_blacklist_reason.clone(),
+            ),
             // The following validators were offline for at least 36 hours when solana was halted in May '22
             // Just a warning for now.
             // 2cFGQhgkuibqREEXvz7wEb5CwUqGHfBSTB2oa1hmhkcw
@@ -832,39 +847,145 @@ impl ProcessScoresOptions {
             // 7K8DVxtNJGnMtUY1CQJT5jcs8sFGSZTDiG7kowvFpECh
 
             // The following were down for more than 36 hours in halt #2 (May '22) and #3 (June '22)
-            ("5wNag8umJhaaj9gGdqmBz7Xwwy1NL5yQ1QbvPdQrDd3h".into(), default_blacklist_reason.clone()),
-            ("7oX5QSP9yBjT1F1sRSDCX91ZxibETqemDM4WLDju5rTM".into(), default_blacklist_reason.clone()),
-            ("Cva4NEnBRYfFv8i3RtcMTbEYgyVNmewk2aAgh4fco2mP".into(), default_blacklist_reason.clone()),
-
+            (
+                "5wNag8umJhaaj9gGdqmBz7Xwwy1NL5yQ1QbvPdQrDd3h".into(),
+                default_blacklist_reason.clone(),
+            ),
+            (
+                "7oX5QSP9yBjT1F1sRSDCX91ZxibETqemDM4WLDju5rTM".into(),
+                default_blacklist_reason.clone(),
+            ),
+            (
+                "Cva4NEnBRYfFv8i3RtcMTbEYgyVNmewk2aAgh4fco2mP".into(),
+                default_blacklist_reason.clone(),
+            ),
             // Exiting mainnet:
-            ("2vxNDV7aAbrb4Whnxs9LiuxCsm9oubX3c1hozXPsoD97".into(), default_blacklist_reason.clone()),
-
+            (
+                "2vxNDV7aAbrb4Whnxs9LiuxCsm9oubX3c1hozXPsoD97".into(),
+                default_blacklist_reason.clone(),
+            ),
             // Marinade stake puts them in superminority, unstaking puts them back - this creates loop of stake/unstake
-            ("CogentC52e7kktFfWHwsqSmr8LiS1yAtfqhHcftCPcBJ".into(), "This validator is close to the superminority threshold and will not receive stake to avoid multiple stake/unstake operations on successive epochs.".to_string()),
+            // ("CogentC52e7kktFfWHwsqSmr8LiS1yAtfqhHcftCPcBJ".into(), "This validator is close to the superminority threshold and will not receive stake to avoid multiple stake/unstake operations on successive epochs.".to_string()),
 
             // changing commission between 0% and 10% on epoch boundaries
-            ("42GfJFeWySe1zt7xYxXNFK1E2V7xXnf1Jpc6B4g63QTm".into(), default_blacklist_reason.clone()),
-
+            (
+                "42GfJFeWySe1zt7xYxXNFK1E2V7xXnf1Jpc6B4g63QTm".into(),
+                default_blacklist_reason.clone(),
+            ),
             // changing commission between 0% and 10% on epoch boundaries
-            ("DpvUS8Losp2UGGaSGyupyKwQqHkmruzfwrZg2VYK7Zg7".into(), default_blacklist_reason.clone()),
-
+            (
+                "DpvUS8Losp2UGGaSGyupyKwQqHkmruzfwrZg2VYK7Zg7".into(),
+                default_blacklist_reason.clone(),
+            ),
             // changing commission before and after our bot's runs
-            ("GUTjLTQTCmeBzTrBgCsWSM7G2JrsLvwXbXdafWvicqbr".into(), default_blacklist_reason.clone()),
-
+            (
+                "GUTjLTQTCmeBzTrBgCsWSM7G2JrsLvwXbXdafWvicqbr".into(),
+                default_blacklist_reason.clone(),
+            ),
             // changing commission on epoch boundaries (e.g. 3frtXYL2Wx8oDkmA2Me9xxKWDXp6vcdnJDT2Bcf7w17jNiVZ4vkAn9EQNqqUdJDnPoGpPDry7YTy8KSnjx8wtUD9, 4DS6MYpbsfL3p2afkbE16gcT5WtbW4ndQK4P3jCMWenrvkxnGBM3kXbkhkphB4KcS7DJBCDCMFsGRbigxREcDajn)
-            ("G2v6wsh4xVHj1xMLtLFzX2hP6T1TTxti5ZxK3iv8TJQZ".into(), default_blacklist_reason.clone()),
-            
+            (
+                "G2v6wsh4xVHj1xMLtLFzX2hP6T1TTxti5ZxK3iv8TJQZ".into(),
+                default_blacklist_reason.clone(),
+            ),
             // changing commission on epoch boundaries (e.g. QgXGHawoM8vePwNASfhvMRvm8LgLNinUM5bdeSZMtoehnyP3VLHt2MFUNeyRNP1wGJs5VqrxQPXuxskMMvzjY7E, 3nx6GhUkTVNg7JcNV5GFEFoBx3tCtPgxbqe7NX3o8ZWbM3s4U2aWfSm1ExcMRWprfqaZ9nCoZJedbSU26u9EEiZ)
-            ("4hDeRsRJBsvbA1KNjGmZ9zB1Nv3Cn2KbANNUCQwjBh29".into(), default_blacklist_reason.clone()),
-            
+            (
+                "4hDeRsRJBsvbA1KNjGmZ9zB1Nv3Cn2KbANNUCQwjBh29".into(),
+                default_blacklist_reason.clone(),
+            ),
             // commission
-            ("65U5oJPjCpQPuLSUPJZVFWSQgRmVtgcZwo6fJREFiYoz".into(), default_blacklist_reason.clone()),
-            ("GUTjLTQTCmeBzTrBgCsWSM7G2JrsLvwXbXdafWvicqbr".into(), default_blacklist_reason.clone()),
-            ("3Ueg3qrAVv95tJzTiKM2dd33NswZT77yRf9wXcBDCn2c".into(), default_blacklist_reason.clone()),
-            ("ND5jXgjtiPC34Qf71oEiDrcim4hPhyPdhBrqeZidUxF".into(), default_blacklist_reason.clone()),
-            ("7zx69bryF4TnqRGTzE7CJkSXUZ495nFFZk4RCkXQEcgH".into(), default_blacklist_reason.clone()),
-            ("A5G8TTnkxPqTDkpeM9LPjwvE4mQ8E7vTzdBNvLqs1pTg".into(), default_blacklist_reason.clone()),
-            ("DdiWSFE9u9Gu1GqGVaPWqAAk6TuYA7t35tb54fCu37uS".into(), default_blacklist_reason.clone()),
+            (
+                "65U5oJPjCpQPuLSUPJZVFWSQgRmVtgcZwo6fJREFiYoz".into(),
+                default_blacklist_reason.clone(),
+            ),
+            (
+                "GUTjLTQTCmeBzTrBgCsWSM7G2JrsLvwXbXdafWvicqbr".into(),
+                default_blacklist_reason.clone(),
+            ),
+            (
+                "3Ueg3qrAVv95tJzTiKM2dd33NswZT77yRf9wXcBDCn2c".into(),
+                default_blacklist_reason.clone(),
+            ),
+            (
+                "ND5jXgjtiPC34Qf71oEiDrcim4hPhyPdhBrqeZidUxF".into(),
+                default_blacklist_reason.clone(),
+            ),
+            (
+                "7zx69bryF4TnqRGTzE7CJkSXUZ495nFFZk4RCkXQEcgH".into(),
+                default_blacklist_reason.clone(),
+            ),
+            (
+                "A5G8TTnkxPqTDkpeM9LPjwvE4mQ8E7vTzdBNvLqs1pTg".into(),
+                default_blacklist_reason.clone(),
+            ),
+            (
+                "DdiWSFE9u9Gu1GqGVaPWqAAk6TuYA7t35tb54fCu37uS".into(),
+                default_blacklist_reason.clone(),
+            ),
+            // commission
+            (
+                "DWCLHn3hzmru2K8Lg2MFhsBABPmEGDkd664V9z77NjCt".into(),
+                default_blacklist_reason.clone(),
+            ),
+            (
+                "61rPRUxuPb4xy6X6AmKcSf4CiNaerttpaFC3GLvUu2Ba".into(),
+                default_blacklist_reason.clone(),
+            ),
+            (
+                "auzyWJi8E1NVBEUYZezBc8bS1GZYTVnhpdc53zH7PPH".into(),
+                default_blacklist_reason.clone(),
+            ),
+            (
+                "tnaKD5evRkBonwyW5n5yKoJrt7H871Aboh1AWXH9AFj".into(),
+                default_blacklist_reason.clone(),
+            ),
+            (
+                "AJGaXvnzDEGxjcDX9nYSWQj8urAdtTmgCuwD1TtF97yz".into(),
+                default_blacklist_reason.clone(),
+            ),
+            (
+                "4Ucwi2DKML7jBzDDTpiZ46vq7jQAHb93ZAFkYnT9TTyq".into(),
+                default_blacklist_reason.clone(),
+            ),
+            (
+                "CfLRV8ZS41ksYMUzcQ8joz3ruPBLTv8LmRHtNCj15ovf".into(),
+                default_blacklist_reason.clone(),
+            ),
+            (
+                "9DLtFk37Nxr9CbJAvxKnjEpCzCdyjtNcD6juCYdYktTM".into(),
+                default_blacklist_reason.clone(),
+            ),
+            (
+                "JAvknH4Pn9b8jqGg5rpkGAFrnXRFcrmL5kumTXyacy5u".into(),
+                default_blacklist_reason.clone(),
+            ),
+            (
+                "5Mergmrmd1XFeDRMHbzS4XLiorfG3Qsddwff9RkX4Lup".into(),
+                default_blacklist_reason.clone(),
+            ),
+            (
+                "AkVoTV14wHZVB7sNiLxGCiE4tS1mXG2CkZSuqLzxHS2V".into(),
+                default_blacklist_reason.clone(),
+            ),
+            (
+                "DEmZmtt9bDeDcBMExjKhpCFnA5yj46XbAkzu61CXPKFh".into(),
+                default_blacklist_reason.clone(),
+            ),
+            (
+                "5maAYsh7z7iikpZs7x89wx1QsxXe8rpF7B5cvrDvWCej".into(),
+                default_blacklist_reason.clone(),
+            ),
+            (
+                "BK8YruGZQMFmbKn8CcLL5i3UqVwmACnc77YhgPYqGkNh".into(),
+                default_blacklist_reason.clone(),
+            ),
+            (
+                "Dhs6P4kjtszfhaLeZGbVZrFgPcimgQ91SGZXkAxcx1tp".into(),
+                default_blacklist_reason.clone(),
+            ),
+            (
+                "9zdVCLZqSRR26Emy5su23P2yHwX5DF9doS462yjcNnHm".into(),
+                default_blacklist_reason.clone(),
+            ),
         ]);
 
         for v in validator_scores.iter_mut() {
