@@ -1026,6 +1026,10 @@ impl ProcessScoresOptions {
                 "GuPYoGPCQDp1bJ3A6ALzcHik6ziu6CX95ADHeQvbzMfQ".into(),
                 default_blacklist_reason.clone(),
             ),
+            (
+                "8VNKjGimak6Y53b2vHfcg2fFZMN7gWM1DLm9bhDXw8QS".into(),
+                default_blacklist_reason.clone(),
+            ),
         ]);
 
         for v in validator_scores.iter_mut() {
