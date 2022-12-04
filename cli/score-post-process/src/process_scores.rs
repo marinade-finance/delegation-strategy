@@ -1031,19 +1031,11 @@ impl ProcessScoresOptions {
                 default_blacklist_reason.clone(),
             ),
             (
-                "DUCKsGEPEdNv9QeskPNwoJdWgAXjxUFrkNDEKjAnLWyY".into(),
-                default_blacklist_reason.clone(),
-            ),
-            (
                 "AG781KzvU89JSu9W69adSLkaVW11g9L3HNxYyuePrfrk".into(),
                 default_blacklist_reason.clone(),
             ),
             (
                 "4tdrCXpoqAdSR7Zqbow6ikL1BGLHV2SK9XpwYsXvWGCW".into(),
-                default_blacklist_reason.clone(),
-            ),
-            (
-                "6mBPtjzc3tWBSDFvJEBnidhpf3bqPoLk7nP9STWyzdzv".into(),
                 default_blacklist_reason.clone(),
             ),
             (
