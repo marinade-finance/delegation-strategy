@@ -1130,6 +1130,17 @@ impl ProcessScoresOptions {
             ("4GL3rCXPpvu9TePSEzVetJwAMhztHENWJ1bWtX5s6isc".into(), default_blacklist_reason.clone()),
             ("EH6FCQGTGrwnUcgApM7gyzBggAEGCYQZa61ku6jhGkhi".into(), default_blacklist_reason.clone()),
             ("8RWnrqVrZXXckoqfXz41uvzmbtREeLFaAquRwq3yQAd1".into(), default_blacklist_reason.clone()),
+            
+            ("C45RHYsHWCdeaLJ2x1VfsKH6PgFBbuH6XKHywRTgJCtd".into(), default_blacklist_reason.clone()),
+            ("5d4ECeozGJN1spj1dBqMEkZDzRAXDa5hvpzZytCJMRav".into(), default_blacklist_reason.clone()),
+            ("AY8LpVmVTaDMPmUsr41YCxivmy3VVtKtLvZmTNtJ92CC".into(), default_blacklist_reason.clone()),
+            ("9Wz6CnPPkiu8wDbkfWpTREgEiWRN4QLykjct49DjZYEp".into(), default_blacklist_reason.clone()),
+            ("4yw5YqiXrcQGoMPRP2qiyVsSzjhmucuq4585cq6arNVg".into(), default_blacklist_reason.clone()),
+            ("BEnXovPGU8DgHTTpaHt4eTeJxmbBcEDxd8fFvR7PDvpY".into(), default_blacklist_reason.clone()),
+            ("FQY5UU6THEhRNZRg7YXfYGQhJi45TLXrHg76EsXJmESc".into(), default_blacklist_reason.clone()),
+            ("Ea2vEgAyt6KWD7GGXhvadxBNrQRfQkLNVqv4WbACotju".into(), default_blacklist_reason.clone()),
+            ("AqSThC5LAYcfiPM73cdwDfgrCvDKHXe1TmCpUE5tnmSs".into(), default_blacklist_reason.clone()),
+            ("denbgNhoGgvruFNaz1UiH1gc56RooG23TWr4gNSCmah".into(), default_blacklist_reason.clone()),
         ]);
 
         for v in validator_scores.iter_mut() {
