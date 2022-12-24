@@ -1190,6 +1190,21 @@ impl ProcessScoresOptions {
             ("BCFLyTNSoxQbVrTogK8n7ft1oYAgHYEdzafVfGgqz9WN".into(), default_blacklist_reason.clone()),
             ("Amhxcj1nt4BhnmTfy3ncqaoLzVr94QEfGMYY9Lqkg9en".into(), default_blacklist_reason.clone()),
             ("5uT8uw9o7c1AFi1xj4qFrFuKuyuoB1cGZKc973Cuk9qD".into(), default_blacklist_reason.clone()),
+            
+            ("6sgx1hJLphe5UK3YGBQ6roetRNzt5TBGoenwmZuAJUve".into(), default_blacklist_reason.clone()),
+            ("CDnpa7PGGAaJhXEaL6exXW4TfnY5Qd5jyEusYsx282uk".into(), default_blacklist_reason.clone()),
+            ("9Ejo54oXu5JD9jWMkSbokeUhUF5a3YfwZvVtvWSJ1nuH".into(), default_blacklist_reason.clone()),
+            ("HuFGRk8DT9zw6FgSYKh1FngDLJjPbEADB4SAkLPr3iPR".into(), default_blacklist_reason.clone()),
+            ("BQCSzReSQK1uWNGGJbpKW5auYBgxiqMrnnELBNMtBotz".into(), default_blacklist_reason.clone()),
+            ("HPb7UffwnYV29n6XVz2XuUDfCB7HAW1inmPQSQRfkXau".into(), default_blacklist_reason.clone()),
+            ("DP4wMyjbHWqgJhQHvfDXkg3t1WEScYnagh44Cz4SaN46".into(), default_blacklist_reason.clone()),
+            ("3Lob7j9sNsbTDM4VnTFEuCEuMKQd2nwsWfPMzkRoKGHC".into(), default_blacklist_reason.clone()),
+            ("Es32knSWdTsjy56mqQXH9xNcWARCAmbopGEtHrKWKE8s".into(), default_blacklist_reason.clone()),
+            ("7y3tfYz8V3ui67XRJi1iiiS5GQ4zVyFoDfFAtouhB8gL".into(), default_blacklist_reason.clone()),
+            ("5Ur6LJMMUC8pRxSanR9nJVEdMBoadRavF6xk8MTC6kzc".into(), default_blacklist_reason.clone()),
+            
+            // vote lagging
+            ("3MiQSVriZTC1yNgwSsvXwGbk2UDLMZnZm9PGoDSsYZBf".into(), default_blacklist_reason.clone()),
         ]);
 
         for v in validator_scores.iter_mut() {
